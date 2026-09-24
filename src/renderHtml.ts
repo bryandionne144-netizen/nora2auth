@@ -110,7 +110,7 @@ export function renderHtml(comments: Comment[] = []): string {
         width: 100%;
         height: 100%;
         pointer-events: none;
-        opacity: 0.09;
+        opacity: 0.035;
         z-index: 50;
         mix-blend-mode: multiply;
       }
