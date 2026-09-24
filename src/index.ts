@@ -1,13 +1,27 @@
 import { renderHtml } from "./renderHtml";
 
-export default {
-	async fetch(request, env) {
-		const stmt = env.DB.prepare("SELECT * FROM comments LIMIT 3");
-		const { results } = await stmt.all();
+type Comment = {
+	id?: number;
+	author: string;
+	content: string;
+};
 
-		return new Response(renderHtml(JSON.stringify(results, null, 2)), {
+export default {
+	async fetch(_request, env) {
+		let comments: Comment[] = [];
+		try {
+			const stmt = env.DB.prepare(
+				"SELECT id, author, content FROM comments ORDER BY id ASC LIMIT 6",
+			);
+			const { results } = await stmt.all<Comment>();
+			comments = results ?? [];
+		} catch {
+			comments = [];
+		}
+
+		return new Response(renderHtml(comments), {
 			headers: {
-				"content-type": "text/html",
+				"content-type": "text/html; charset=utf-8",
 			},
 		});
 	},
