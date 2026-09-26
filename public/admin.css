@@ -387,12 +387,18 @@ select.avail-indisponible {
 @media (max-width: 860px) {
   #app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .mobile-pick { display: grid; flex: 1; }
-  .view-site { margin-right: 0; }
+  .topbar { flex-wrap: wrap; padding: 12px 14px; gap: 8px; }
+  .mobile-pick { display: grid; flex: 1 1 160px; min-width: 0; }
+  .view-site { margin-right: 0; padding: 8px 12px; }
+  .savebar { margin-left: auto; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .quick { align-items: stretch; flex-direction: column; }
   .quick select, select.avail, .inline select { width: 100%; }
   #save-label { display: none; }
-  #view, .banner { width: min(100% - 24px, 1040px); }
-  .login-card { padding: 28px 20px 22px; }
+  #view, .banner { width: min(100% - 28px, 1040px); }
+  .card, .editor { padding: 16px; border-radius: 18px; }
+  .card h2 { font-size: 1.35rem; }
+  .login { padding: 20px 16px; }
+  .login-card { padding: 28px 18px 22px; border-radius: 24px; }
+  input, select, textarea { font-size: 16px; }
 }
