@@ -93,7 +93,8 @@
 	}
 
 	function persistOffline() {
-		const savedContent = writeStore("lc_offline_content", state.content);
+		const pack = { updatedAt: Date.now(), content: state.content };
+		const savedContent = writeStore("lc_offline_pack", pack) && writeStore("lc_offline_content", state.content);
 		writeStore("lc_offline_bookings", state.bookings);
 		return savedContent;
 	}
@@ -126,7 +127,14 @@
 	}
 
 	function updateSave() {
-		document.getElementById("save-label").textContent = state.dirty ? "Modifications non enregistrées" : "À jour";
+		const here = state.mode === "file";
+		document.getElementById("save-label").textContent = state.dirty
+			? here
+				? "Pas sur l'autre appareil"
+				: "Modifications non enregistrées"
+			: here
+				? "Enregistré ici"
+				: "À jour";
 		document.getElementById("save-btn").disabled = !state.dirty;
 		document.getElementById("savebar").classList.toggle("dirty", state.dirty);
 	}
@@ -135,7 +143,7 @@
 		const banner = document.getElementById("banner");
 		if (state.mode === "file") {
 			banner.hidden = false;
-			banner.textContent = "Chaque changement met le site à jour tout de suite. Clique sur Voir le site pour le regarder.";
+			banner.textContent = "Le téléphone et l'ordinateur ont chacun leur copie. Synchroniser crée le fichier à ouvrir sur l'autre appareil, à la place de l'ancien.";
 			return;
 		}
 		if (state.passwordChanged) {
@@ -574,6 +582,8 @@
 		document.getElementById("login").hidden = true;
 		document.getElementById("app").hidden = false;
 		document.body.dataset.mode = state.mode;
+		const syncBtn = document.getElementById("sync-btn");
+		if (syncBtn) syncBtn.hidden = state.mode !== "file";
 		renderNav();
 		render();
 		updateSave();
@@ -605,6 +615,17 @@
 		notifySite();
 		if (announce) toast(kept ? "Le site est à jour." : "Enregistré pour cette session.");
 		return kept;
+	}
+
+	function syncFile() {
+		clearTimeout(schedulePublish.timer);
+		flushMarquee();
+		persistOffline();
+		state.dirty = false;
+		updateSave();
+		notifySite();
+		if (window.parent && window.parent !== window) window.parent.postMessage({ type: "lc-export" }, "*");
+		toast("Fichier prêt. Ouvre-le sur l'autre appareil à la place de l'ancien.");
 	}
 
 	function showSite() {
@@ -722,6 +743,7 @@
 		render();
 	});
 	document.getElementById("save-btn").addEventListener("click", () => save());
+	document.getElementById("sync-btn").addEventListener("click", () => syncFile());
 	document.getElementById("view-site").addEventListener("click", (event) => {
 		if (state.mode !== "file" && window.parent === window) return;
 		event.preventDefault();

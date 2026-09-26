@@ -56,6 +56,7 @@ ${read("public/site.css")}
     <iframe id="admin-frame" title="Espace pro"></iframe>
   </div>
   <script type="application/json" id="lc-default">${jsonForScript(defaultContent)}</script>
+  <script type="application/json" id="lc-state">{"updatedAt":0}</script>
   ${plain("lc-logo", `data:image/png;base64,${logo}`)}
   ${plain("lc-admin-css", read("public/admin.css"))}
   ${plain("lc-render", read("public/render-site.js"))}

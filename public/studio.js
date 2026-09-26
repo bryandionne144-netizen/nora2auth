@@ -11,18 +11,41 @@
 		return node ? node.textContent : "";
 	}
 
-	function storedContent() {
+	function readJson(id) {
+		const raw = asset(id);
+		if (!raw.trim()) return null;
 		try {
-			const raw = localStorage.getItem("lc_offline_content");
-			return raw ? JSON.parse(raw) : null;
+			return JSON.parse(raw);
 		} catch {
 			return null;
 		}
 	}
 
-	function paint() {
+	function storedPack() {
+		try {
+			const raw = localStorage.getItem("lc_offline_pack");
+			if (raw) return JSON.parse(raw);
+			const legacy = localStorage.getItem("lc_offline_content");
+			if (legacy) return { updatedAt: 1, content: JSON.parse(legacy) };
+		} catch {
+			return null;
+		}
+		return null;
+	}
+
+	function activeContent() {
+		const filePack = readJson("lc-state");
+		const localPack = storedPack();
+		const fileTime = filePack && filePack.updatedAt ? filePack.updatedAt : 0;
+		const localTime = localPack && localPack.updatedAt ? localPack.updatedAt : 0;
+		if (localPack && localPack.content && localTime >= fileTime) return localPack.content;
+		if (filePack && filePack.content) return filePack.content;
 		const embedded = asset("lc-default");
-		const base = storedContent() || (embedded ? JSON.parse(embedded) : null);
+		return embedded ? JSON.parse(embedded) : null;
+	}
+
+	function paint() {
+		const base = activeContent();
 		if (!base || typeof globalThis.renderLaCoche !== "function") return;
 		const content = typeof globalThis.normalizeLaCoche === "function" ? globalThis.normalizeLaCoche(base) : base;
 		let html = globalThis.renderLaCoche(content);
@@ -39,6 +62,43 @@
 		if (doc.title) document.title = doc.title;
 		if (typeof globalThis.mountLaCocheSite === "function") globalThis.mountLaCocheSite(root);
 		window.scrollTo(0, y);
+	}
+
+	function jsonForFile(value) {
+		return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
+	}
+
+	function exportHtml() {
+		const pack = storedPack();
+		if (!pack || !pack.content) return;
+		const htmlNode = document.documentElement.cloneNode(true);
+		const site = htmlNode.querySelector("#site-root");
+		if (site) site.replaceChildren();
+		const frameCopy = htmlNode.querySelector("#admin-frame");
+		if (frameCopy) {
+			frameCopy.removeAttribute("srcdoc");
+			frameCopy.removeAttribute("data-ready");
+		}
+		const layerCopy = htmlNode.querySelector("#admin-layer");
+		if (layerCopy) layerCopy.setAttribute("hidden", "");
+		htmlNode.querySelector("body")?.classList.remove("admin-open");
+		let stateNode = htmlNode.querySelector("#lc-state");
+		if (!stateNode) {
+			stateNode = document.createElement("script");
+			stateNode.id = "lc-state";
+			stateNode.type = "application/json";
+			htmlNode.querySelector("body")?.prepend(stateNode);
+		}
+		stateNode.textContent = jsonForFile({ updatedAt: pack.updatedAt || Date.now(), content: pack.content });
+		const html = "<!DOCTYPE html>\n" + htmlNode.outerHTML;
+		const blob = new Blob([html], { type: "text/html" });
+		const link = document.createElement("a");
+		link.href = URL.createObjectURL(blob);
+		link.download = "la-coche.html";
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		setTimeout(() => URL.revokeObjectURL(link.href), 2000);
 	}
 
 	function adminDocument() {
@@ -95,6 +155,7 @@
         </label>
         <div class="savebar" id="savebar">
           <span id="save-label">À jour</span>
+          <button type="button" class="ghost" id="sync-btn" hidden>Synchroniser</button>
           <button type="button" id="save-btn">Enregistrer</button>
         </div>
       </header>
@@ -139,6 +200,7 @@
 		const data = event.data;
 		if (!data || typeof data !== "object") return;
 		if (data.type === "lc-refresh") paint();
+		if (data.type === "lc-export") exportHtml();
 		if (data.type === "lc-close") closeAdmin();
 	});
 

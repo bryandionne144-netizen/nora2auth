@@ -53,6 +53,7 @@ export function renderAdmin(): string {
         </label>
         <div class="savebar" id="savebar">
           <span id="save-label">À jour</span>
+          <button type="button" class="ghost" id="sync-btn" hidden>Synchroniser</button>
           <button type="button" id="save-btn">Enregistrer</button>
         </div>
       </header>
