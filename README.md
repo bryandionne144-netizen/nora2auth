@@ -1,59 +1,47 @@
-# Worker + D1 Database
+# La Coche Esthétique Auto
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+Site vitrine pour La Coche, esthétique automobile mobile à Bellefeuille, Lac-Paul et Mirabel-Nord, avec un espace pro qui modifie tout le contenu.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+Le site public est servi par un Worker Cloudflare. Les textes, prix, horaires, secteurs, soins et leur disponibilité vivent dans la base D1. L'espace pro écrit dans cette base, et la vitrine se met à jour tout de suite.
 
-<!-- dash-content-start -->
+## Pages
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+- `/` — le site pour les visiteurs
+- `/admin` — l'espace pro
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+Mot de passe initial : `LaCoche5538`
+
+Changez-le dans **Compte** dès la première connexion. Tant qu'il n'est pas changé, un rappel reste affiché dans l'espace pro.
+
+## Ce que l'espace pro contrôle
+
+- Statut ouvert, complet ou fermé, et le message affiché
+- Bandeau d'annonce
+- Textes de l'accueil, de l'atelier, de la citation et du pied de page
+- Soins : prix, durée, catégorie, signature, disponible ou indisponible
+- Secteurs desservis, avec le même interrupteur
+- Horaires, démarche, galerie, avis et questions
+- Ordre et visibilité des sections
+- Formulaire de rendez-vous, y compris le mettre en pause
+- Demandes reçues : nouveau, confirmé, fait, annulé
+- Coordonnées, Instagram, logo, menu et référencement
+
+Les soins ou secteurs marqués indisponibles restent visibles sur le site, avec un badge, et disparaissent du formulaire.
+
+## Développement
+
+```bash
+npm install
+npm run db:local
+npm run dev
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+Le site local s'ouvre sur le port indiqué par Wrangler, en général `http://127.0.0.1:8787`.
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+## Déploiement
+
+```bash
+npm run deploy
 ```
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
-
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
-```
-
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
-
-## Setup Steps
-
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
-   ```bash
-   npx wrangler d1 create d1-template-database
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
+La commande applique d'abord les migrations D1 distantes.
