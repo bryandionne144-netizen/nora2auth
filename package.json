@@ -24,6 +24,7 @@
 		"cf-typegen": "wrangler types",
 		"check": "tsc --noEmit",
 		"build:render": "esbuild src/browserRender.ts --bundle --format=iife --platform=browser --outfile=public/render-site.js",
+		"build:html": "node --experimental-strip-types scripts/build-standalone.mjs",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"db:local": "wrangler d1 migrations apply DB --local",

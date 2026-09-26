@@ -92,38 +92,6 @@
 		return memoryPassword || readStore("lc_offline_password") || DEFAULT_PASSWORD;
 	}
 
-	function assetText(id) {
-		const node = document.getElementById(id);
-		return node ? node.textContent : "";
-	}
-
-	function buildSiteHtml(content) {
-		if (typeof globalThis.renderLaCoche !== "function") return "";
-		let html = globalThis.renderLaCoche(content);
-		const css = assetText("lc-site-css");
-		const js = assetText("lc-site-js");
-		const logo = assetText("lc-logo").trim();
-		if (css) html = html.replace('<link rel="stylesheet" href="/site.css" />', `<style>\n${css}\n</style>`);
-		if (js) html = html.replace('<script src="/site.js"></script>', `<script>\n${js.replace(/<\/script>/g, "<\\/script>")}\n</script>`);
-		if (logo) {
-			html = html.split('href="/logo.png"').join(`href="${logo}"`);
-			html = html.split('src="/logo.png"').join(`src="${logo}"`);
-			html = html.split("https://lacoche.local/logo.png").join(logo);
-		}
-		return html.split('href="/admin"').join('href="la-coche-admin.html"');
-	}
-
-	function downloadText(filename, text, type) {
-		const blob = new Blob([text], { type });
-		const link = document.createElement("a");
-		link.href = URL.createObjectURL(blob);
-		link.download = filename;
-		document.body.appendChild(link);
-		link.click();
-		link.remove();
-		setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-	}
-
 	function persistOffline() {
 		const savedContent = writeStore("lc_offline_content", state.content);
 		writeStore("lc_offline_bookings", state.bookings);
@@ -160,13 +128,14 @@
 	function updateSave() {
 		document.getElementById("save-label").textContent = state.dirty ? "Modifications non enregistrées" : "À jour";
 		document.getElementById("save-btn").disabled = !state.dirty;
+		document.getElementById("savebar").classList.toggle("dirty", state.dirty);
 	}
 
 	function showBanner() {
 		const banner = document.getElementById("banner");
 		if (state.mode === "file") {
 			banner.hidden = false;
-			banner.textContent = "Fichier ouvert sur ton ordinateur. Le bouton Enregistrer télécharge le site mis à jour : remplace l'ancien la-coche-site.html.";
+			banner.textContent = "Chaque changement met le site à jour tout de suite. Clique sur Voir le site pour le regarder.";
 			return;
 		}
 		if (state.passwordChanged) {
@@ -184,6 +153,7 @@
 		cursor[parts[parts.length - 1]] = value;
 		state.dirty = true;
 		updateSave();
+		schedulePublish();
 	}
 
 	function field(label, bind, value, type = "text") {
@@ -199,7 +169,7 @@
 		return pairs.map(([value, label]) => `<option value="${esc(value)}"${value === selected ? " selected" : ""}>${esc(label)}</option>`).join("");
 	}
 	function avail(list, id, value) {
-		return `<select data-list="${esc(list)}" data-id="${esc(id)}" data-field="availability">${options(value, [["disponible", "Disponible"], ["indisponible", "Indisponible"]])}</select>`;
+		return `<select class="avail avail-${esc(value)}" data-list="${esc(list)}" data-id="${esc(id)}" data-field="availability">${options(value, [["disponible", "Disponible"], ["indisponible", "Indisponible"]])}</select>`;
 	}
 	function actions(list, id) {
 		return `<div class="row-actions">
@@ -227,6 +197,10 @@
 	}
 
 	function render() {
+		if (state.mode === "file" && state.tab === "demandes") {
+			const stored = readStore("lc_offline_bookings");
+			if (Array.isArray(stored)) state.bookings = stored;
+		}
 		const views = {
 			apercu: renderHomeDash,
 			identite: renderIdentity,
@@ -594,14 +568,46 @@
 	function openApp() {
 		document.getElementById("login").hidden = true;
 		document.getElementById("app").hidden = false;
-		if (state.mode === "file") {
-			const brand = document.querySelector(".side-brand");
-			if (brand) brand.setAttribute("href", "la-coche-site.html");
-		}
+		document.body.dataset.mode = state.mode;
 		renderNav();
 		render();
 		updateSave();
 		showBanner();
+	}
+
+	function notifySite() {
+		const message = { type: "lc-refresh" };
+		if (window.parent && window.parent !== window) window.parent.postMessage(message, "*");
+		try {
+			const channel = new BroadcastChannel("la-coche");
+			channel.postMessage(state.mode === "file" ? message : { type: "reload" });
+			channel.close();
+		} catch {
+			/* le navigateur n'a pas les canaux */
+		}
+	}
+
+	function schedulePublish() {
+		if (state.mode !== "file") return;
+		clearTimeout(schedulePublish.timer);
+		schedulePublish.timer = setTimeout(() => publishOffline(false), 280);
+	}
+
+	function publishOffline(announce) {
+		const kept = persistOffline();
+		state.dirty = false;
+		updateSave();
+		notifySite();
+		if (announce) toast(kept ? "Le site est à jour." : "Enregistré pour cette session.");
+		return kept;
+	}
+
+	function showSite() {
+		if (window.parent && window.parent !== window) {
+			window.parent.postMessage({ type: "lc-close" }, "*");
+			return;
+		}
+		location.href = "/";
 	}
 
 	function offlineLogin(password) {
@@ -626,28 +632,22 @@
 	}
 
 	async function saveOffline() {
+		clearTimeout(schedulePublish.timer);
 		flushMarquee();
 		const button = document.getElementById("save-btn");
 		button.disabled = true;
-		document.getElementById("save-label").textContent = "Préparation du fichier…";
+		document.getElementById("save-label").textContent = "Mise à jour…";
 		try {
-			const kept = persistOffline();
-			const html = buildSiteHtml(state.content);
-			if (!html || !html.includes("<style>")) {
-				throw new Error("Le fichier du site n'a pas pu être préparé.");
-			}
-			downloadText("la-coche-site.html", html, "text/html");
-			state.dirty = false;
-			toast(kept ? "Site téléchargé. Remplace l'ancien fichier." : "Site téléchargé. Ce navigateur ne garde pas les changements dans la page admin.");
-			render();
+			publishOffline(true);
 		} catch (error) {
-			toast(error.message || "Téléchargement impossible.");
+			toast(error.message || "Enregistrement impossible.");
 		}
 		updateSave();
 	}
 
 	async function save() {
 		if (!state.content) return;
+		clearTimeout(schedulePublish.timer);
 		if (state.mode === "file") return saveOffline();
 		flushMarquee();
 		const button = document.getElementById("save-btn");
@@ -663,6 +663,7 @@
 			if (!response.ok) throw new Error(data.error || "Enregistrement impossible.");
 			state.content = data;
 			state.dirty = false;
+			notifySite();
 			toast("Enregistré. Le site est à jour.");
 			render();
 		} catch (error) {
@@ -716,6 +717,16 @@
 		render();
 	});
 	document.getElementById("save-btn").addEventListener("click", () => save());
+	document.getElementById("view-site").addEventListener("click", (event) => {
+		if (state.mode !== "file" && window.parent === window) return;
+		event.preventDefault();
+		showSite();
+	});
+	document.querySelector(".side-brand").addEventListener("click", (event) => {
+		if (state.mode !== "file" || window.parent === window) return;
+		event.preventDefault();
+		showSite();
+	});
 
 	document.getElementById("view").addEventListener("input", onEdit);
 	document.getElementById("view").addEventListener("change", onEdit);
@@ -741,8 +752,13 @@
 			const item = listOf(target.dataset.list).find((entry) => entry.id === target.dataset.id);
 			if (!item) return;
 			item[target.dataset.field] = target.dataset.kind === "int" ? Number(target.value) : target.type === "checkbox" ? target.checked : target.value;
+			if (target.dataset.field === "availability") {
+				target.classList.toggle("avail-disponible", target.value === "disponible");
+				target.classList.toggle("avail-indisponible", target.value === "indisponible");
+			}
 			state.dirty = true;
 			updateSave();
+			schedulePublish();
 		}
 	}
 
@@ -760,6 +776,7 @@
 			state.dirty = true;
 			updateSave();
 			render();
+			schedulePublish();
 			return;
 		}
 		if (action === "add" && blank[button.dataset.list]) {
@@ -767,6 +784,7 @@
 			state.dirty = true;
 			updateSave();
 			render();
+			schedulePublish();
 			return;
 		}
 		if (action === "remove") {
@@ -776,6 +794,7 @@
 			state.dirty = true;
 			updateSave();
 			render();
+			schedulePublish();
 			return;
 		}
 		if (action === "move") {
@@ -788,6 +807,7 @@
 			state.dirty = true;
 			updateSave();
 			render();
+			schedulePublish();
 			return;
 		}
 		if (action === "section-move") {
@@ -800,6 +820,7 @@
 			state.dirty = true;
 			updateSave();
 			render();
+			schedulePublish();
 			return;
 		}
 		if (action === "export") {
@@ -872,7 +893,8 @@
 				state.dirty = true;
 				updateSave();
 				render();
-				toast("Fichier chargé. Enregistrez pour télécharger le site.");
+				publishOffline(false);
+				toast("Fichier chargé. Le site est à jour.");
 				input.value = "";
 				return;
 			}
@@ -940,10 +962,9 @@
 	async function resetContent() {
 		if (state.mode === "file") {
 			state.content = defaultContent();
-			state.dirty = true;
-			updateSave();
 			render();
-			toast("Contenu d'origine rétabli. Enregistrez pour télécharger le site.");
+			publishOffline(false);
+			toast("Contenu d'origine rétabli. Le site est à jour.");
 			return;
 		}
 		try {
@@ -970,6 +991,13 @@
 		if (!state.dirty) return;
 		event.preventDefault();
 		event.returnValue = "";
+	});
+
+	window.addEventListener("storage", (event) => {
+		if (state.mode !== "file" || event.key !== "lc_offline_bookings") return;
+		const stored = readStore("lc_offline_bookings");
+		state.bookings = Array.isArray(stored) ? stored : [];
+		render();
 	});
 
 	fetch("/api/admin/session")

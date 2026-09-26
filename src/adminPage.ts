@@ -16,6 +16,8 @@ export function renderAdmin(): string {
   <link rel="stylesheet" href="/admin.css" />
 </head>
 <body>
+  <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="grid-bg" aria-hidden="true"></div>
   <div id="login" class="login">
     <form id="login-form" class="login-card">
       <img src="/logo.png" alt="" width="92" height="92" />
@@ -44,6 +46,7 @@ export function renderAdmin(): string {
     </aside>
     <div class="workspace">
       <header class="topbar">
+        <a class="view-site" id="view-site" href="/">Voir le site</a>
         <label class="mobile-pick">
           Section
           <select id="tab-select"></select>

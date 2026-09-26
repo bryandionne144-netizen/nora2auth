@@ -1,0 +1,159 @@
+(() => {
+	const root = document.getElementById("site-root");
+	const layer = document.getElementById("admin-layer");
+	const frame = document.getElementById("admin-frame");
+	if (!root || !layer || !frame) return;
+
+	document.documentElement.dataset.studio = "1";
+
+	function asset(id) {
+		const node = document.getElementById(id);
+		return node ? node.textContent : "";
+	}
+
+	function storedContent() {
+		try {
+			const raw = localStorage.getItem("lc_offline_content");
+			return raw ? JSON.parse(raw) : null;
+		} catch {
+			return null;
+		}
+	}
+
+	function paint() {
+		const embedded = asset("lc-default");
+		const base = storedContent() || (embedded ? JSON.parse(embedded) : null);
+		if (!base || typeof globalThis.renderLaCoche !== "function") return;
+		const content = typeof globalThis.normalizeLaCoche === "function" ? globalThis.normalizeLaCoche(base) : base;
+		let html = globalThis.renderLaCoche(content);
+		const logo = asset("lc-logo").trim();
+		if (logo) {
+			html = html.split('href="/logo.png"').join(`href="${logo}"`);
+			html = html.split('src="/logo.png"').join(`src="${logo}"`);
+			html = html.split("https://lacoche.local/logo.png").join(logo);
+		}
+		const doc = new DOMParser().parseFromString(html, "text/html");
+		doc.querySelectorAll("script").forEach((node) => node.remove());
+		const y = window.scrollY;
+		root.replaceChildren(...doc.body.childNodes);
+		if (doc.title) document.title = doc.title;
+		if (typeof globalThis.mountLaCocheSite === "function") globalThis.mountLaCocheSite(root);
+		window.scrollTo(0, y);
+	}
+
+	function adminDocument() {
+		const logo = asset("lc-logo").trim() || "/logo.png";
+		const css = asset("lc-admin-css");
+		const defaults = asset("lc-default");
+		const renderJs = asset("lc-render").replace(/<\/script/gi, "<\\/script");
+		const adminJs = asset("lc-admin-js").replace(/<\/script/gi, "<\\/script");
+		return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Espace pro · La Coche</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+  <style>${css}</style>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div id="login" class="login">
+    <form id="login-form" class="login-card">
+      <img src="${logo}" alt="" width="92" height="92" />
+      <p class="eyebrow">Espace pro</p>
+      <h1>La Coche</h1>
+      <p class="muted">Le panneau qui pilote le site. Tout ce que les visiteurs voient se modifie ici.</p>
+      <label>
+        Mot de passe
+        <input type="password" name="password" autocomplete="current-password" required />
+      </label>
+      <p class="form-error" id="login-error" hidden></p>
+      <button type="submit">Entrer</button>
+    </form>
+  </div>
+  <div id="app" hidden>
+    <aside class="sidebar">
+      <a class="side-brand" href="/" target="_blank" rel="noreferrer">
+        <img src="${logo}" alt="" />
+        <span>
+          <strong>La Coche</strong>
+          <em>Voir le site</em>
+        </span>
+      </a>
+      <nav id="tabs"></nav>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <a class="view-site" id="view-site" href="/">Voir le site</a>
+        <label class="mobile-pick">
+          Section
+          <select id="tab-select"></select>
+        </label>
+        <div class="savebar" id="savebar">
+          <span id="save-label">À jour</span>
+          <button type="button" id="save-btn">Enregistrer</button>
+        </div>
+      </header>
+      <div id="banner" class="banner" hidden></div>
+      <main id="view"></main>
+    </div>
+  </div>
+  <div id="toast" role="status"></div>
+  <script type="application/json" id="lc-default">${defaults}</script>
+  <script>${renderJs}</script>
+  <script>${adminJs}</script>
+</body>
+</html>`;
+	}
+
+	function openAdmin() {
+		if (!frame.dataset.ready) {
+			frame.srcdoc = adminDocument();
+			frame.dataset.ready = "1";
+		}
+		layer.hidden = false;
+		document.body.classList.add("admin-open");
+		if (location.hash !== "#admin") history.replaceState(null, "", "#admin");
+	}
+
+	function closeAdmin() {
+		const wasOpen = !layer.hidden;
+		layer.hidden = true;
+		document.body.classList.remove("admin-open");
+		if (location.hash === "#admin") history.replaceState(null, "", location.pathname + location.search);
+		if (wasOpen) paint();
+	}
+
+	root.addEventListener("click", (event) => {
+		const link = event.target.closest('a[href="/admin"], a[href="#admin"], a[href="la-coche-admin.html"]');
+		if (!link) return;
+		event.preventDefault();
+		openAdmin();
+	});
+
+	window.addEventListener("message", (event) => {
+		const data = event.data;
+		if (!data || typeof data !== "object") return;
+		if (data.type === "lc-refresh") paint();
+		if (data.type === "lc-close") closeAdmin();
+	});
+
+	if ("BroadcastChannel" in window) {
+		const channel = new BroadcastChannel("la-coche");
+		channel.addEventListener("message", (event) => {
+			if (event.data && event.data.type === "lc-refresh") paint();
+		});
+	}
+
+	window.addEventListener("hashchange", () => {
+		if (location.hash === "#admin") openAdmin();
+		else closeAdmin();
+	});
+
+	paint();
+	if (location.hash === "#admin") openAdmin();
+})();
