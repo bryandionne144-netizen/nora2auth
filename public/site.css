@@ -72,6 +72,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .container { width: min(1160px, calc(100% - 40px)); margin-inline: auto; }
 .section { padding: clamp(72px, 10vw, 128px) 0; }
+section[id], main[id] { scroll-margin-top: 96px; }
 .section-head { max-width: 680px; margin-bottom: 36px; }
 .section-head h2, .hero h1, .quote-band blockquote {
   font-family: var(--display);
@@ -637,8 +638,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .call-fab span { display: none; }
 
-.reveal { opacity: 0; transform: translateY(24px); animation: none; }
-.reveal.in { opacity: 1; transform: none; transition: opacity 0.7s ease, transform 0.7s ease; transition-delay: var(--d, 0ms); }
+.js .reveal { opacity: 0; transform: translateY(24px); }
+.js .reveal.in { opacity: 1; transform: none; transition: opacity 0.7s ease, transform 0.7s ease; transition-delay: var(--d, 0ms); }
 
 @keyframes drift {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -714,6 +715,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
     animation: none !important;
     transition: none !important;
   }
-  .reveal { opacity: 1; transform: none; }
+  .js .reveal { opacity: 1; transform: none; }
   html { scroll-behavior: auto; }
 }

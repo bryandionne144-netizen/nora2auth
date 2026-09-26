@@ -11,9 +11,22 @@ import {
 	updateBookingStatus,
 } from "./db";
 import { json } from "./http";
-import { isObj, sameOrigin } from "./util";
+import { clientIp, isObj, sameOrigin, todayInToronto } from "./util";
 
 const BOOKING_STATUS = new Set(["nouveau", "confirme", "fait", "annule"]);
+const bookingHits = new Map<string, { n: number; reset: number }>();
+
+function tooManyBookings(request: Request): boolean {
+	const ip = clientIp(request);
+	const now = Date.now();
+	const row = bookingHits.get(ip);
+	if (!row || row.reset < now) {
+		bookingHits.set(ip, { n: 1, reset: now + 10 * 60 * 1000 });
+		return false;
+	}
+	row.n += 1;
+	return row.n > 8;
+}
 
 async function readJson(request: Request): Promise<unknown> {
 	const text = await request.text();
@@ -66,6 +79,16 @@ export async function handleApi(request: Request, env: Env, url: URL): Promise<R
 
 	if (path === "/api/admin/content" && method === "GET") {
 		return json(await getContent(env));
+	}
+
+	if (path === "/api/admin/normalize" && method === "POST") {
+		let body: unknown;
+		try {
+			body = await readJson(request);
+		} catch {
+			return json({ error: "Contenu invalide." }, 400);
+		}
+		return json(normalizeContent(body));
 	}
 
 	if (path === "/api/admin/content" && method === "PUT") {
@@ -140,6 +163,9 @@ async function createPublicBooking(request: Request, env: Env): Promise<Response
 		return json({ error: "Requête invalide." }, 400);
 	}
 	if (!isObj(body)) return json({ error: "Requête invalide." }, 400);
+	if (tooManyBookings(request)) {
+		return json({ error: "Trop de demandes. Réessayez dans quelques minutes." }, 429);
+	}
 	if (typeof body.company === "string" && body.company.trim()) return json({ ok: true });
 
 	const content: SiteContent = await getContent(env);
@@ -153,6 +179,12 @@ async function createPublicBooking(request: Request, env: Env): Promise<Response
 	const service = typeof body.service === "string" ? body.service.trim() : "";
 	const zone = typeof body.zone === "string" ? body.zone.trim() : "";
 	const preferredDate = typeof body.date === "string" ? body.date.trim().slice(0, 20) : "";
+	if (preferredDate && !/^\d{4}-\d{2}-\d{2}$/.test(preferredDate)) {
+		return json({ error: "Date invalide." }, 400);
+	}
+	if (preferredDate && preferredDate < todayInToronto()) {
+		return json({ error: "Choisissez une date à venir." }, 400);
+	}
 	const message = typeof body.message === "string" ? body.message.trim().slice(0, 1000) : "";
 
 	if (name.length < 2 || name.length > 80) return json({ error: "Indiquez votre nom." }, 400);

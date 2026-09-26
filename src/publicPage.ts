@@ -1,5 +1,5 @@
 import type { GalleryItem, SectionId, ServiceItem, SiteContent, Testimonial, ZoneItem } from "./content";
-import { esc, instagramHref, jsonForScript, rich, telHref } from "./util";
+import { esc, instagramHref, jsonForScript, rich, telHref, todayInToronto } from "./util";
 
 const STATUS_LABEL: Record<SiteContent["status"]["state"], string> = {
 	ouvert: "Ouvert",
@@ -59,6 +59,7 @@ export function renderPublic(content: SiteContent, requestUrl: URL): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>document.documentElement.classList.add("js")</script>
   <title>${esc(content.seo.title)}</title>
   <meta name="description" content="${esc(content.seo.description)}" />
   <meta name="theme-color" content="#05070c" />
@@ -116,8 +117,8 @@ export function renderPublic(content: SiteContent, requestUrl: URL): string {
       <div class="hero-copy">
         <p class="status status-${content.status.state}"><i></i><span>${esc(STATUS_LABEL[content.status.state])}</span> ${esc(content.status.message)}</p>
         <p class="kicker">${esc(content.hero.kicker)}</p>
-        <h1><span class="line">${esc(content.hero.title)}</span><span class="line grad">${esc(content.hero.highlight)}</span></h1>
-        <p class="lede">${esc(content.hero.subtitle)}</p>
+        <h1><span class="line">${esc(content.hero.title)}</span>${content.hero.highlight ? `<span class="line grad">${esc(content.hero.highlight)}</span>` : ""}</h1>
+        ${content.hero.subtitle ? `<p class="lede">${esc(content.hero.subtitle)}</p>` : ""}
         <div class="hero-actions">
           <a class="btn btn-primary" href="${esc(bookingHref)}">${esc(content.hero.primaryCta)}</a>
           ${
@@ -126,7 +127,7 @@ export function renderPublic(content: SiteContent, requestUrl: URL): string {
 							: ""
 					}
         </div>
-        <p class="hero-note">${esc(content.hero.note)}</p>
+        ${content.hero.note ? `<p class="hero-note">${esc(content.hero.note)}</p>` : ""}
         <ul class="hero-meta">
           ${phoneLink ? `<li><a href="${esc(phoneLink)}">${esc(content.brand.phoneDisplay)}</a></li>` : ""}
           ${instagram ? `<li><a href="${esc(instagram)}" target="_blank" rel="noreferrer">${esc(content.brand.instagram)}</a></li>` : ""}
@@ -225,6 +226,12 @@ export function renderPublic(content: SiteContent, requestUrl: URL): string {
 			: ""
 	}
   <script src="/site.js"></script>
+  <script>
+    setTimeout(function () {
+      if (document.documentElement.dataset.motion) return;
+      document.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
+    }, 1600);
+  </script>
 </body>
 </html>`;
 }
@@ -381,7 +388,7 @@ function renderGallery(content: SiteContent): string {
 
 function galleryCard(item: GalleryItem, index: number): string {
 	const photo = item.imageUrl
-		? `<img src="${esc(item.imageUrl)}" alt="" />`
+		? `<img src="${esc(item.imageUrl)}" alt="${esc(item.title)}" />`
 		: `<span class="motif motif-${esc(item.motif)}"></span>`;
 	return `<article class="tile reveal" style="--d:${(index % 3) * 70}ms">
     <div class="tile-visual">${photo}<span class="tile-index">${String(index + 1).padStart(2, "0")}</span></div>
@@ -502,7 +509,7 @@ function renderBooking(content: SiteContent, phoneLink: string): string {
                   ${zones.map((item) => `<option value="${esc(item.name)}">${esc(item.name)}</option>`).join("")}
                 </select>
               </label>
-              <label class="field full">${esc(labels.date)}<input name="date" type="date" /></label>
+              <label class="field full">${esc(labels.date)}<input name="date" type="date" min="${todayInToronto()}" /></label>
               <label class="field full">${esc(labels.message)}<textarea name="message" rows="4" maxlength="1000" placeholder="Véhicule, entrée, précisions..."></textarea></label>
             </div>
             <p class="form-error" hidden></p>

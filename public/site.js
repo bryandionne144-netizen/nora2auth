@@ -1,4 +1,5 @@
 (() => {
+	document.documentElement.dataset.motion = "1";
 	const nav = document.querySelector(".nav");
 	const progress = document.querySelector(".progress");
 	const burger = document.querySelector(".burger");
@@ -24,6 +25,17 @@
 				links.classList.remove("open");
 				burger.setAttribute("aria-expanded", "false");
 			}
+		});
+		document.addEventListener("click", (event) => {
+			if (!links.classList.contains("open")) return;
+			if (event.target.closest(".nav")) return;
+			links.classList.remove("open");
+			burger.setAttribute("aria-expanded", "false");
+		});
+		document.addEventListener("keydown", (event) => {
+			if (event.key !== "Escape" || !links.classList.contains("open")) return;
+			links.classList.remove("open");
+			burger.setAttribute("aria-expanded", "false");
 		});
 	}
 
@@ -72,8 +84,9 @@
 		event.preventDefault();
 		const error = form.querySelector(".form-error");
 		const button = form.querySelector("button[type=submit]");
-		error.hidden = true;
-		button.disabled = true;
+		const success = document.querySelector("#booking-success");
+		if (error) error.hidden = true;
+		if (button) button.disabled = true;
 		const data = Object.fromEntries(new FormData(form).entries());
 		try {
 			const response = await fetch("/api/bookings", {
@@ -84,11 +97,13 @@
 			const payload = await response.json().catch(() => ({}));
 			if (!response.ok) throw new Error(payload.error || "Envoi impossible.");
 			form.hidden = true;
-			document.querySelector("#booking-success").hidden = false;
+			if (success) success.hidden = false;
 		} catch (errorValue) {
-			error.textContent = errorValue.message || "Envoi impossible.";
-			error.hidden = false;
-			button.disabled = false;
+			if (error) {
+				error.textContent = errorValue.message || "Envoi impossible.";
+				error.hidden = false;
+			}
+			if (button) button.disabled = false;
 		}
 	});
 })();

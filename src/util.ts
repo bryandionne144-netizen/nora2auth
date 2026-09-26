@@ -31,6 +31,20 @@ export function str(value: unknown, fallback: string, max = 400): string {
 	return trimmed.slice(0, max);
 }
 
+export function keep(value: unknown, fallback: string, max = 400): string {
+	if (typeof value !== "string") return fallback;
+	return value.trim().slice(0, max);
+}
+
+export function todayInToronto(): string {
+	return new Intl.DateTimeFormat("en-CA", {
+		timeZone: "America/Toronto",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(new Date());
+}
+
 export function optionalStr(value: unknown, max = 400): string {
 	if (typeof value !== "string") return "";
 	return value.trim().slice(0, max);

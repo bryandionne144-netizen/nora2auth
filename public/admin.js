@@ -158,7 +158,12 @@
 			demandes: renderBookings,
 			compte: renderAccount,
 		};
-		document.getElementById("view").innerHTML = (views[state.tab] || renderHomeDash)();
+		try {
+			document.getElementById("view").innerHTML = (views[state.tab] || renderHomeDash)();
+		} catch (error) {
+			document.getElementById("view").innerHTML = `<section class="card"><h2>Affichage impossible</h2><p class="hint">Le contenu chargé est incomplet. Recharge la page sans enregistrer.</p></section>`;
+			toast(error.message || "Affichage impossible.");
+		}
 		document.querySelectorAll("#tabs [data-tab]").forEach((button) => button.classList.toggle("on", button.dataset.tab === state.tab));
 		document.getElementById("tab-select").value = state.tab;
 		const badge = document.getElementById("badge-demandes");
@@ -202,7 +207,6 @@
       <h2>Note interne</h2>
       <p class="hint">Visible seulement ici. Les visiteurs ne la voient pas.</p>
       ${area("Note", "internalNote", c.internalNote)}
-      ${c.internalNote ? `<p class="note">${esc(c.internalNote)}</p>` : ""}
     </section>`;
 	}
 
@@ -455,7 +459,7 @@
       <p class="hint">Téléchargez une copie, ou rechargez un fichier exporté. Il faut enregistrer ensuite pour publier.</p>
       <div class="inline">
         <button type="button" class="ghost" data-action="export">Télécharger le JSON</button>
-        <label class="ghost">Importer<input id="import-file" type="file" accept="application/json" hidden /></label>
+        <label class="ghost">Importer<input id="import-file" class="visually-hidden" type="file" accept="application/json,.json" /></label>
       </div>
     </section>
     <section class="card"><h2>Réinitialiser</h2>
@@ -700,7 +704,14 @@
 			const text = await input.files[0].text();
 			const data = JSON.parse(text);
 			if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Fichier invalide.");
-			state.content = data;
+			const response = await api("/api/admin/normalize", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(data),
+			});
+			const normalized = await response.json().catch(() => null);
+			if (!response.ok || !normalized) throw new Error("Fichier invalide.");
+			state.content = normalized;
 			state.dirty = true;
 			updateSave();
 			render();

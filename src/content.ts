@@ -1,4 +1,4 @@
-import { bool, idOf, isObj, optionalStr, safeUrl, str, uniqueIds } from "./util";
+import { bool, idOf, isObj, keep, optionalStr, safeUrl, str, uniqueIds } from "./util";
 
 export const MOTIFS = ["eau", "cuir", "chrome", "bac", "jantes", "nuit"] as const;
 export type Motif = (typeof MOTIFS)[number];
@@ -636,76 +636,75 @@ export function normalizeContent(input: unknown): SiteContent {
 	}
 	if (isObj(src.announcement)) {
 		base.announcement.enabled = bool(src.announcement.enabled, base.announcement.enabled);
-		base.announcement.text = str(src.announcement.text, base.announcement.text, 180);
+		base.announcement.text = keep(src.announcement.text, base.announcement.text, 180);
 	}
 	if (isObj(src.status)) {
 		const state = src.status.state;
 		base.status.state = state === "ouvert" || state === "complet" || state === "ferme" ? state : "ouvert";
-		base.status.message = str(src.status.message, base.status.message, 160);
+		base.status.message = keep(src.status.message, base.status.message, 160);
 	}
 	if (isObj(src.hero)) {
 		base.hero.kicker = str(src.hero.kicker, base.hero.kicker, 120);
 		base.hero.title = str(src.hero.title, base.hero.title, 80);
-		base.hero.highlight = str(src.hero.highlight, base.hero.highlight, 80);
-		base.hero.subtitle = str(src.hero.subtitle, base.hero.subtitle, 400);
+		base.hero.highlight = keep(src.hero.highlight, base.hero.highlight, 80);
+		base.hero.subtitle = keep(src.hero.subtitle, base.hero.subtitle, 400);
 		base.hero.primaryCta = str(src.hero.primaryCta, base.hero.primaryCta, 40);
 		base.hero.secondaryCta = str(src.hero.secondaryCta, base.hero.secondaryCta, 40);
-		base.hero.note = str(src.hero.note, base.hero.note, 220);
+		base.hero.note = keep(src.hero.note, base.hero.note, 220);
 	}
 	if (Array.isArray(src.marquee)) {
-		const lines = src.marquee
+		base.marquee = src.marquee
 			.filter((item): item is string => typeof item === "string")
 			.map((item) => item.trim())
 			.filter(Boolean)
 			.slice(0, 24)
 			.map((item) => item.slice(0, 48));
-		if (lines.length) base.marquee = lines;
 	}
 	base.stats = normalizeStats(src.stats, base.stats);
 	if (isObj(src.about)) {
 		base.about.kicker = str(src.about.kicker, base.about.kicker, 60);
 		base.about.title = str(src.about.title, base.about.title, 120);
-		base.about.text = str(src.about.text, base.about.text, 800);
+		base.about.text = keep(src.about.text, base.about.text, 800);
 		base.about.points = normalizePoints(src.about.points, base.about.points);
 	}
 	if (isObj(src.servicesIntro)) {
 		base.servicesIntro.kicker = str(src.servicesIntro.kicker, base.servicesIntro.kicker, 60);
 		base.servicesIntro.title = str(src.servicesIntro.title, base.servicesIntro.title, 120);
-		base.servicesIntro.text = str(src.servicesIntro.text, base.servicesIntro.text, 400);
+		base.servicesIntro.text = keep(src.servicesIntro.text, base.servicesIntro.text, 400);
 	}
 	base.services = normalizeServices(src.services, base.services);
 	if (isObj(src.zonesIntro)) {
 		base.zonesIntro.kicker = str(src.zonesIntro.kicker, base.zonesIntro.kicker, 60);
 		base.zonesIntro.title = str(src.zonesIntro.title, base.zonesIntro.title, 120);
-		base.zonesIntro.text = str(src.zonesIntro.text, base.zonesIntro.text, 400);
+		base.zonesIntro.text = keep(src.zonesIntro.text, base.zonesIntro.text, 400);
 	}
 	base.zones = normalizeZones(src.zones, base.zones);
 	if (isObj(src.stepsIntro)) {
 		base.stepsIntro.kicker = str(src.stepsIntro.kicker, base.stepsIntro.kicker, 60);
 		base.stepsIntro.title = str(src.stepsIntro.title, base.stepsIntro.title, 140);
-		base.stepsIntro.text = str(src.stepsIntro.text, base.stepsIntro.text, 400);
+		base.stepsIntro.text = keep(src.stepsIntro.text, base.stepsIntro.text, 400);
 	}
 	base.steps = normalizeSteps(src.steps, base.steps);
 	if (isObj(src.galleryIntro)) {
 		base.galleryIntro.kicker = str(src.galleryIntro.kicker, base.galleryIntro.kicker, 60);
 		base.galleryIntro.title = str(src.galleryIntro.title, base.galleryIntro.title, 140);
-		base.galleryIntro.text = str(src.galleryIntro.text, base.galleryIntro.text, 400);
+		base.galleryIntro.text = keep(src.galleryIntro.text, base.galleryIntro.text, 400);
 	}
 	base.gallery = normalizeGallery(src.gallery, base.gallery);
 	if (isObj(src.quote)) {
-		base.quote.text = str(src.quote.text, base.quote.text, 280);
+		base.quote.text = keep(src.quote.text, base.quote.text, 280);
 		base.quote.by = str(src.quote.by, base.quote.by, 60);
 	}
 	if (isObj(src.testimonialsIntro)) {
 		base.testimonialsIntro.kicker = str(src.testimonialsIntro.kicker, base.testimonialsIntro.kicker, 60);
 		base.testimonialsIntro.title = str(src.testimonialsIntro.title, base.testimonialsIntro.title, 140);
-		base.testimonialsIntro.text = str(src.testimonialsIntro.text, base.testimonialsIntro.text, 400);
+		base.testimonialsIntro.text = keep(src.testimonialsIntro.text, base.testimonialsIntro.text, 400);
 	}
 	base.testimonials = normalizeTestimonials(src.testimonials, base.testimonials);
 	if (isObj(src.hoursIntro)) {
 		base.hoursIntro.kicker = str(src.hoursIntro.kicker, base.hoursIntro.kicker, 60);
 		base.hoursIntro.title = str(src.hoursIntro.title, base.hoursIntro.title, 120);
-		base.hoursIntro.note = str(src.hoursIntro.note, base.hoursIntro.note, 300);
+		base.hoursIntro.note = keep(src.hoursIntro.note, base.hoursIntro.note, 300);
 	}
 	base.hours = normalizeHours(src.hours, base.hours);
 	if (isObj(src.faqIntro)) {
@@ -717,12 +716,12 @@ export function normalizeContent(input: unknown): SiteContent {
 		base.booking.enabled = bool(src.booking.enabled, base.booking.enabled);
 		base.booking.kicker = str(src.booking.kicker, base.booking.kicker, 60);
 		base.booking.title = str(src.booking.title, base.booking.title, 140);
-		base.booking.text = str(src.booking.text, base.booking.text, 400);
+		base.booking.text = keep(src.booking.text, base.booking.text, 400);
 		base.booking.submitLabel = str(src.booking.submitLabel, base.booking.submitLabel, 40);
 		base.booking.successTitle = str(src.booking.successTitle, base.booking.successTitle, 80);
-		base.booking.successText = str(src.booking.successText, base.booking.successText, 300);
-		base.booking.pauseMessage = str(src.booking.pauseMessage, base.booking.pauseMessage, 300);
-		base.booking.disclaimer = str(src.booking.disclaimer, base.booking.disclaimer, 240);
+		base.booking.successText = keep(src.booking.successText, base.booking.successText, 300);
+		base.booking.pauseMessage = keep(src.booking.pauseMessage, base.booking.pauseMessage, 300);
+		base.booking.disclaimer = keep(src.booking.disclaimer, base.booking.disclaimer, 240);
 		if (isObj(src.booking.labels)) {
 			const labels = src.booking.labels;
 			(Object.keys(base.booking.labels) as (keyof SiteContent["booking"]["labels"])[]).forEach((key) => {
@@ -731,7 +730,7 @@ export function normalizeContent(input: unknown): SiteContent {
 		}
 	}
 	if (isObj(src.footer)) {
-		base.footer.blurb = str(src.footer.blurb, base.footer.blurb, 300);
+		base.footer.blurb = keep(src.footer.blurb, base.footer.blurb, 300);
 		base.footer.note = str(src.footer.note, base.footer.note, 160);
 	}
 	if (isObj(src.sections)) {
