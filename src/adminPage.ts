@@ -1,3 +1,6 @@
+import { defaultContent } from "./content";
+import { jsonForScript } from "./util";
+
 export function renderAdmin(): string {
 	return `<!DOCTYPE html>
 <html lang="fr">
@@ -55,6 +58,8 @@ export function renderAdmin(): string {
     </div>
   </div>
   <div id="toast" role="status"></div>
+  <script type="application/json" id="lc-default">${jsonForScript(defaultContent)}</script>
+  <script src="/render-site.js"></script>
   <script src="/admin.js"></script>
 </body>
 </html>`;

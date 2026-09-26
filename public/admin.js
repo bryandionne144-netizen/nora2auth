@@ -42,13 +42,93 @@
 		["nuit", "Nuit"],
 	];
 
+	const DEFAULT_PASSWORD = "LaCoche5538";
 	const state = {
 		content: null,
 		bookings: [],
 		tab: "apercu",
 		dirty: false,
 		passwordChanged: true,
+		mode: "server",
 	};
+	let memoryPassword = "";
+
+	function storage() {
+		try {
+			const key = "lc_storage_probe";
+			localStorage.setItem(key, "1");
+			localStorage.removeItem(key);
+			return localStorage;
+		} catch {
+			return null;
+		}
+	}
+
+	function readStore(key) {
+		const box = storage();
+		if (!box) return null;
+		try {
+			const raw = box.getItem(key);
+			return raw ? JSON.parse(raw) : null;
+		} catch {
+			return null;
+		}
+	}
+
+	function writeStore(key, value) {
+		const box = storage();
+		if (!box) return false;
+		box.setItem(key, JSON.stringify(value));
+		return true;
+	}
+
+	function defaultContent() {
+		const node = document.getElementById("lc-default");
+		if (!node) return null;
+		return JSON.parse(node.textContent);
+	}
+
+	function currentPassword() {
+		return memoryPassword || readStore("lc_offline_password") || DEFAULT_PASSWORD;
+	}
+
+	function assetText(id) {
+		const node = document.getElementById(id);
+		return node ? node.textContent : "";
+	}
+
+	function buildSiteHtml(content) {
+		if (typeof globalThis.renderLaCoche !== "function") return "";
+		let html = globalThis.renderLaCoche(content);
+		const css = assetText("lc-site-css");
+		const js = assetText("lc-site-js");
+		const logo = assetText("lc-logo").trim();
+		if (css) html = html.replace('<link rel="stylesheet" href="/site.css" />', `<style>\n${css}\n</style>`);
+		if (js) html = html.replace('<script src="/site.js"></script>', `<script>\n${js.replace(/<\/script>/g, "<\\/script>")}\n</script>`);
+		if (logo) {
+			html = html.split('href="/logo.png"').join(`href="${logo}"`);
+			html = html.split('src="/logo.png"').join(`src="${logo}"`);
+			html = html.split("https://lacoche.local/logo.png").join(logo);
+		}
+		return html.split('href="/admin"').join('href="la-coche-admin.html"');
+	}
+
+	function downloadText(filename, text, type) {
+		const blob = new Blob([text], { type });
+		const link = document.createElement("a");
+		link.href = URL.createObjectURL(blob);
+		link.download = filename;
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+	}
+
+	function persistOffline() {
+		const savedContent = writeStore("lc_offline_content", state.content);
+		writeStore("lc_offline_bookings", state.bookings);
+		return savedContent;
+	}
 
 	const esc = (value) =>
 		String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -84,6 +164,11 @@
 
 	function showBanner() {
 		const banner = document.getElementById("banner");
+		if (state.mode === "file") {
+			banner.hidden = false;
+			banner.textContent = "Fichier ouvert sur ton ordinateur. Le bouton Enregistrer télécharge le site mis à jour : remplace l'ancien la-coche-site.html.";
+			return;
+		}
 		if (state.passwordChanged) {
 			banner.hidden = true;
 			return;
@@ -496,12 +581,8 @@
 		state.bookings = bookingRes.ok ? await bookingRes.json() : [];
 		if (sessionRes.ok) state.passwordChanged = !!(await sessionRes.json()).passwordChanged;
 		state.dirty = false;
-		document.getElementById("login").hidden = true;
-		document.getElementById("app").hidden = false;
-		renderNav();
-		render();
-		updateSave();
-		showBanner();
+		state.mode = "server";
+		openApp();
 	}
 
 	function flushMarquee() {
@@ -510,8 +591,64 @@
 		state.content.marquee = node.value.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, 24);
 	}
 
+	function openApp() {
+		document.getElementById("login").hidden = true;
+		document.getElementById("app").hidden = false;
+		if (state.mode === "file") {
+			const brand = document.querySelector(".side-brand");
+			if (brand) brand.setAttribute("href", "la-coche-site.html");
+		}
+		renderNav();
+		render();
+		updateSave();
+		showBanner();
+	}
+
+	function offlineLogin(password) {
+		const error = document.getElementById("login-error");
+		if (!defaultContent()) {
+			error.hidden = false;
+			error.textContent = "Ce fichier est incomplet. Télécharge la page admin à jour.";
+			return;
+		}
+		if (password !== currentPassword()) {
+			error.hidden = false;
+			error.textContent = "Mot de passe incorrect.";
+			return;
+		}
+		state.mode = "file";
+		state.content = readStore("lc_offline_content") || defaultContent();
+		state.bookings = readStore("lc_offline_bookings") || [];
+		state.passwordChanged = currentPassword() !== DEFAULT_PASSWORD;
+		state.dirty = false;
+		openApp();
+		toast("Connecté.");
+	}
+
+	async function saveOffline() {
+		flushMarquee();
+		const button = document.getElementById("save-btn");
+		button.disabled = true;
+		document.getElementById("save-label").textContent = "Préparation du fichier…";
+		try {
+			const kept = persistOffline();
+			const html = buildSiteHtml(state.content);
+			if (!html || !html.includes("<style>")) {
+				throw new Error("Le fichier du site n'a pas pu être préparé.");
+			}
+			downloadText("la-coche-site.html", html, "text/html");
+			state.dirty = false;
+			toast(kept ? "Site téléchargé. Remplace l'ancien fichier." : "Site téléchargé. Ce navigateur ne garde pas les changements dans la page admin.");
+			render();
+		} catch (error) {
+			toast(error.message || "Téléchargement impossible.");
+		}
+		updateSave();
+	}
+
 	async function save() {
 		if (!state.content) return;
+		if (state.mode === "file") return saveOffline();
 		flushMarquee();
 		const button = document.getElementById("save-btn");
 		button.disabled = true;
@@ -543,20 +680,29 @@
 		event.preventDefault();
 		const error = document.getElementById("login-error");
 		error.hidden = true;
-		const password = new FormData(event.target).get("password");
-		const response = await fetch("/api/admin/login", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ password }),
-		});
-		const data = await response.json().catch(() => ({}));
-		if (!response.ok) {
-			error.hidden = false;
-			error.textContent = data.error || "Connexion impossible.";
-			return;
+		const password = String(new FormData(event.target).get("password") || "");
+		try {
+			const response = await fetch("/api/admin/login", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ password }),
+			});
+			const data = await response.json().catch(() => null);
+			if (response.ok && data) {
+				state.mode = "server";
+				state.passwordChanged = !!data.passwordChanged;
+				await enter();
+				return;
+			}
+			if (response.status === 401 || response.status === 429) {
+				error.hidden = false;
+				error.textContent = (data && data.error) || "Mot de passe incorrect.";
+				return;
+			}
+			offlineLogin(password);
+		} catch {
+			offlineLogin(password);
 		}
-		state.passwordChanged = !!data.passwordChanged;
-		await enter();
 	});
 
 	document.getElementById("tabs").addEventListener("click", (event) => {
@@ -680,6 +826,23 @@
 		if (event.target.id !== "password-form") return;
 		event.preventDefault();
 		const data = Object.fromEntries(new FormData(event.target).entries());
+		if (state.mode === "file") {
+			if (data.current !== currentPassword()) {
+				toast("Mot de passe actuel incorrect.");
+				return;
+			}
+			if (String(data.next || "").length < 8) {
+				toast("Le nouveau mot de passe doit faire au moins 8 caractères.");
+				return;
+			}
+			memoryPassword = String(data.next);
+			writeStore("lc_offline_password", memoryPassword);
+			state.passwordChanged = memoryPassword !== DEFAULT_PASSWORD;
+			showBanner();
+			event.target.reset();
+			toast("Mot de passe mis à jour pour ce fichier.");
+			return;
+		}
 		try {
 			const response = await api("/api/admin/password", {
 				method: "POST",
@@ -704,6 +867,15 @@
 			const text = await input.files[0].text();
 			const data = JSON.parse(text);
 			if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Fichier invalide.");
+			if (state.mode === "file") {
+				state.content = typeof globalThis.normalizeLaCoche === "function" ? globalThis.normalizeLaCoche(data) : data;
+				state.dirty = true;
+				updateSave();
+				render();
+				toast("Fichier chargé. Enregistrez pour télécharger le site.");
+				input.value = "";
+				return;
+			}
 			const response = await api("/api/admin/normalize", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
@@ -723,6 +895,14 @@
 	});
 
 	async function updateBooking(id, status) {
+		if (state.mode === "file") {
+			const item = state.bookings.find((row) => String(row.id) === String(id));
+			if (item) item.status = status;
+			persistOffline();
+			render();
+			toast("Demande mise à jour.");
+			return;
+		}
 		try {
 			const response = await api(`/api/admin/bookings/${id}`, {
 				method: "PATCH",
@@ -739,6 +919,13 @@
 	}
 
 	async function removeBooking(id) {
+		if (state.mode === "file") {
+			state.bookings = state.bookings.filter((row) => String(row.id) !== String(id));
+			persistOffline();
+			render();
+			toast("Demande supprimée.");
+			return;
+		}
 		try {
 			const response = await api(`/api/admin/bookings/${id}`, { method: "DELETE" });
 			if (!response.ok) throw new Error("Suppression impossible.");
@@ -751,6 +938,14 @@
 	}
 
 	async function resetContent() {
+		if (state.mode === "file") {
+			state.content = defaultContent();
+			state.dirty = true;
+			updateSave();
+			render();
+			toast("Contenu d'origine rétabli. Enregistrez pour télécharger le site.");
+			return;
+		}
 		try {
 			const response = await api("/api/admin/reset", { method: "POST" });
 			const data = await response.json().catch(() => null);
@@ -777,7 +972,9 @@
 		event.returnValue = "";
 	});
 
-	fetch("/api/admin/session").then((response) => {
-		if (response.ok) enter();
-	});
+	fetch("/api/admin/session")
+		.then((response) => {
+			if (response.ok) enter();
+		})
+		.catch(() => {});
 })();

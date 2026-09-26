@@ -1307,7 +1307,10 @@ section[id], main[id] { scroll-margin-top: 96px; }
 			if (success) success.hidden = false;
 		} catch (errorValue) {
 			if (error) {
-				error.textContent = errorValue.message || "Envoi impossible.";
+				const phone = document.querySelector(".call-fab span");
+				error.textContent = location.protocol === "file:"
+					? `Le formulaire a besoin du site en ligne. Appelle${phone ? " au " + phone.textContent.trim() : "-nous"}.`
+					: errorValue.message || "Envoi impossible.";
 				error.hidden = false;
 			}
 			if (button) button.disabled = false;
