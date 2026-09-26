@@ -43,6 +43,7 @@
 	];
 
 	const DEFAULT_PASSWORD = "LaCoche5538";
+	const LIVE_SITE = "https://lacocheesthtiqueauto.obsidianc.workers.dev";
 	const state = {
 		content: null,
 		bookings: [],
@@ -50,6 +51,7 @@
 		dirty: false,
 		passwordChanged: true,
 		mode: "server",
+		cloud: "idle",
 	};
 	let memoryPassword = "";
 
@@ -126,24 +128,39 @@
 		toast.timer = setTimeout(() => node.classList.remove("show"), 2600);
 	}
 
+	function syncEndpoint() {
+		if (location.protocol === "http:" || location.protocol === "https:") return `${location.origin}/api/sync`;
+		return `${LIVE_SITE}/api/sync`;
+	}
+
 	function updateSave() {
 		const here = state.mode === "file";
-		document.getElementById("save-label").textContent = state.dirty
-			? here
-				? "Pas sur l'autre appareil"
-				: "Modifications non enregistrées"
-			: here
-				? "Enregistré ici"
-				: "À jour";
-		document.getElementById("save-btn").disabled = !state.dirty;
-		document.getElementById("savebar").classList.toggle("dirty", state.dirty);
+		let label = "À jour";
+		if (here) {
+			if (state.cloud === "pending") label = "Envoi vers le site…";
+			else if (state.dirty) label = "Pas encore envoyé";
+			else if (state.cloud === "error") label = "Pas sur le site en ligne";
+			else if (state.cloud === "ok") label = "Site en ligne à jour";
+			else label = "Prêt pour le site";
+		} else if (state.dirty) {
+			label = "Modifications non enregistrées";
+		}
+		document.getElementById("save-label").textContent = label;
+		document.getElementById("save-btn").disabled = here ? state.cloud === "pending" : !state.dirty;
+		document.getElementById("savebar").classList.toggle("dirty", state.dirty || state.cloud === "error");
+		showBanner();
 	}
 
 	function showBanner() {
 		const banner = document.getElementById("banner");
+		if (!banner) return;
 		if (state.mode === "file") {
 			banner.hidden = false;
-			banner.textContent = "Le téléphone et l'ordinateur ont chacun leur copie. Synchroniser crée le fichier à ouvrir sur l'autre appareil, à la place de l'ancien.";
+			banner.textContent = state.cloud === "error"
+				? "Le site en ligne n'a pas reçu le dernier changement. Appuie sur Synchroniser."
+				: state.cloud === "ok"
+					? "Le site Cloudflare est à jour. Le téléphone affiche la même chose dès qu'il rouvre la page."
+					: "Les changements partent tout seuls vers le site Cloudflare.";
 			return;
 		}
 		if (state.passwordChanged) {
@@ -603,18 +620,53 @@
 	}
 
 	function schedulePublish() {
-		if (state.mode !== "file") return;
 		clearTimeout(schedulePublish.timer);
-		schedulePublish.timer = setTimeout(() => publishOffline(false), 280);
+		schedulePublish.timer = setTimeout(() => {
+			if (state.mode === "file") publishOffline(false);
+			else saveQuiet();
+		}, 700);
 	}
 
 	function publishOffline(announce) {
-		const kept = persistOffline();
+		persistOffline();
 		state.dirty = false;
-		updateSave();
 		notifySite();
-		if (announce) toast(kept ? "Le site est à jour." : "Enregistré pour cette session.");
-		return kept;
+		pushLive(announce);
+	}
+
+	let pushBusy = false;
+	let pushAgain = false;
+
+	async function pushLive(announce) {
+		if (state.mode !== "file" || !state.content) return;
+		if (pushBusy) {
+			pushAgain = true;
+			return;
+		}
+		pushBusy = true;
+		state.cloud = "pending";
+		updateSave();
+		try {
+			const response = await fetch(syncEndpoint(), {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ password: currentPassword(), content: state.content }),
+			});
+			const data = await response.json().catch(() => ({}));
+			if (!response.ok) throw new Error(data.error || "Le site en ligne n'a pas pris la mise à jour.");
+			state.cloud = "ok";
+			if (announce) toast("Le site en ligne est à jour.");
+		} catch (error) {
+			state.cloud = "error";
+			const offline = !error.message || error.message === "Failed to fetch";
+			if (announce) toast(offline ? "Le site en ligne ne répond pas encore." : error.message);
+		}
+		pushBusy = false;
+		updateSave();
+		if (pushAgain) {
+			pushAgain = false;
+			pushLive(false);
+		}
 	}
 
 	function syncFile() {
@@ -622,10 +674,8 @@
 		flushMarquee();
 		persistOffline();
 		state.dirty = false;
-		updateSave();
 		notifySite();
-		if (window.parent && window.parent !== window) window.parent.postMessage({ type: "lc-export" }, "*");
-		toast("Fichier prêt. Ouvre-le sur l'autre appareil à la place de l'ancien.");
+		pushLive(true);
 	}
 
 	function showSite() {
@@ -648,6 +698,7 @@
 			error.textContent = "Mot de passe incorrect.";
 			return;
 		}
+		memoryPassword = password;
 		state.mode = "file";
 		state.content = readStore("lc_offline_content") || defaultContent();
 		state.bookings = readStore("lc_offline_bookings") || [];
@@ -669,6 +720,44 @@
 			toast(error.message || "Enregistrement impossible.");
 		}
 		updateSave();
+	}
+
+	let serverBusy = false;
+	let serverAgain = false;
+
+	async function saveQuiet() {
+		if (state.mode !== "server" || !state.content) return;
+		if (serverBusy) {
+			serverAgain = true;
+			return;
+		}
+		serverBusy = true;
+		flushMarquee();
+		const snapshot = JSON.stringify(state.content);
+		try {
+			const response = await api("/api/admin/content", {
+				method: "PUT",
+				headers: { "content-type": "application/json" },
+				body: snapshot,
+			});
+			const data = await response.json().catch(() => ({}));
+			if (!response.ok) throw new Error(data.error || "Enregistrement impossible.");
+			if (JSON.stringify(state.content) === snapshot) {
+				state.content = data;
+				state.dirty = false;
+				notifySite();
+			} else {
+				serverAgain = true;
+			}
+		} catch (error) {
+			toast(error.message || "Enregistrement impossible.");
+		}
+		serverBusy = false;
+		updateSave();
+		if (serverAgain) {
+			serverAgain = false;
+			saveQuiet();
+		}
 	}
 
 	async function save() {

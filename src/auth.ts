@@ -28,15 +28,21 @@ function clearFailures(request: Request): void {
 	attempts.delete(clientIp(request));
 }
 
-export async function login(env: Env, request: Request, password: string): Promise<string | null> {
-	if (tooManyAttempts(request)) return null;
+export async function verifyPassword(env: Env, request: Request, password: string): Promise<"ok" | "bad" | "limited"> {
+	if (tooManyAttempts(request)) return "limited";
 	const auth = await getAuth(env);
 	const hash = await sha256(`${auth.salt}:${password}`);
 	if (!safeEqual(hash, auth.password_hash)) {
 		recordFailure(request);
-		return null;
+		return "bad";
 	}
 	clearFailures(request);
+	return "ok";
+}
+
+export async function login(env: Env, request: Request, password: string): Promise<string | null> {
+	const verdict = await verifyPassword(env, request, password);
+	if (verdict !== "ok") return null;
 	const token = randomToken();
 	const tokenHash = await sha256(token);
 	const expires = Date.now() + WEEK * 1000;

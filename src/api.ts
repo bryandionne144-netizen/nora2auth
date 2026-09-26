@@ -1,4 +1,4 @@
-import { clearCookie, isAuthed, login, logout, sessionCookie, tooManyAttempts } from "./auth";
+import { clearCookie, isAuthed, login, logout, sessionCookie, tooManyAttempts, verifyPassword } from "./auth";
 import { normalizeContent, type SiteContent } from "./content";
 import {
 	createBooking,
@@ -12,6 +12,13 @@ import {
 } from "./db";
 import { json } from "./http";
 import { clientIp, contentVersion, isObj, sameOrigin, todayInToronto } from "./util";
+
+const SYNC_CORS = {
+	"access-control-allow-origin": "*",
+	"access-control-allow-methods": "POST, OPTIONS",
+	"access-control-allow-headers": "content-type",
+	"access-control-max-age": "86400",
+};
 
 const BOOKING_STATUS = new Set(["nouveau", "confirme", "fait", "annule"]);
 const bookingHits = new Map<string, { n: number; reset: number }>();
@@ -37,6 +44,10 @@ async function readJson(request: Request): Promise<unknown> {
 export async function handleApi(request: Request, env: Env, url: URL): Promise<Response> {
 	const path = url.pathname;
 	const method = request.method;
+
+	if (path === "/api/sync" && (method === "OPTIONS" || method === "POST")) {
+		return syncLive(request, env, method);
+	}
 
 	if (path === "/api/public/content" && method === "GET") {
 		const content = await getContent(env);
@@ -158,6 +169,25 @@ export async function handleApi(request: Request, env: Env, url: URL): Promise<R
 	}
 
 	return json({ error: "Introuvable." }, 404);
+}
+
+async function syncLive(request: Request, env: Env, method: string): Promise<Response> {
+	if (method === "OPTIONS") return new Response(null, { status: 204, headers: SYNC_CORS });
+	let body: unknown;
+	try {
+		body = await readJson(request);
+	} catch {
+		return json({ error: "Contenu invalide." }, 400, SYNC_CORS);
+	}
+	const password = isObj(body) && typeof body.password === "string" ? body.password : "";
+	const verdict = await verifyPassword(env, request, password);
+	if (verdict === "limited") {
+		return json({ error: "Trop d'essais. Réessayez dans quelques minutes." }, 429, SYNC_CORS);
+	}
+	if (verdict !== "ok") return json({ error: "Mot de passe incorrect." }, 401, SYNC_CORS);
+	const content = normalizeContent(isObj(body) ? body.content : null);
+	await saveContent(env, content);
+	return json({ ok: true, version: contentVersion(content) }, 200, SYNC_CORS);
 }
 
 async function createPublicBooking(request: Request, env: Env): Promise<Response> {

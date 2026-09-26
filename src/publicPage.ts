@@ -84,6 +84,10 @@ export function renderPublic(content: SiteContent, requestUrl: URL): string {
   window.addEventListener("pageshow", function (event) {
     if (event.persisted) location.reload();
   });
+  check();
+  setInterval(function () {
+    if (document.visibilityState === "visible") check();
+  }, 12000);
 })();
   </script>
   <title>${esc(content.seo.title)}</title>

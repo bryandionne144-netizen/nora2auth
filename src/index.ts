@@ -24,7 +24,9 @@ export default {
 		} catch (error) {
 			console.error(error);
 			if (url.pathname.startsWith("/api/")) {
-				return Response.json({ error: "Erreur interne." }, { status: 500 });
+				const headers: Record<string, string> = { "content-type": "application/json; charset=utf-8" };
+				if (url.pathname === "/api/sync") headers["access-control-allow-origin"] = "*";
+				return Response.json({ error: "Erreur interne." }, { status: 500, headers });
 			}
 			return html(
 				renderStatusPage("Indisponible", "Le site est momentanément indisponible. Réessayez dans un instant."),

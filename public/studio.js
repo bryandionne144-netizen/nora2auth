@@ -64,43 +64,6 @@
 		window.scrollTo(0, y);
 	}
 
-	function jsonForFile(value) {
-		return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
-	}
-
-	function exportHtml() {
-		const pack = storedPack();
-		if (!pack || !pack.content) return;
-		const htmlNode = document.documentElement.cloneNode(true);
-		const site = htmlNode.querySelector("#site-root");
-		if (site) site.replaceChildren();
-		const frameCopy = htmlNode.querySelector("#admin-frame");
-		if (frameCopy) {
-			frameCopy.removeAttribute("srcdoc");
-			frameCopy.removeAttribute("data-ready");
-		}
-		const layerCopy = htmlNode.querySelector("#admin-layer");
-		if (layerCopy) layerCopy.setAttribute("hidden", "");
-		htmlNode.querySelector("body")?.classList.remove("admin-open");
-		let stateNode = htmlNode.querySelector("#lc-state");
-		if (!stateNode) {
-			stateNode = document.createElement("script");
-			stateNode.id = "lc-state";
-			stateNode.type = "application/json";
-			htmlNode.querySelector("body")?.prepend(stateNode);
-		}
-		stateNode.textContent = jsonForFile({ updatedAt: pack.updatedAt || Date.now(), content: pack.content });
-		const html = "<!DOCTYPE html>\n" + htmlNode.outerHTML;
-		const blob = new Blob([html], { type: "text/html" });
-		const link = document.createElement("a");
-		link.href = URL.createObjectURL(blob);
-		link.download = "la-coche.html";
-		document.body.appendChild(link);
-		link.click();
-		link.remove();
-		setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-	}
-
 	function adminDocument() {
 		const logo = asset("lc-logo").trim() || "/logo.png";
 		const css = asset("lc-admin-css");
@@ -200,7 +163,6 @@
 		const data = event.data;
 		if (!data || typeof data !== "object") return;
 		if (data.type === "lc-refresh") paint();
-		if (data.type === "lc-export") exportHtml();
 		if (data.type === "lc-close") closeAdmin();
 	});
 
