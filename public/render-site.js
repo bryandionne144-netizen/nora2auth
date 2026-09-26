@@ -1025,7 +1025,6 @@
         ${head(content.about.kicker, content.about.title, content.about.text)}
       </div>
       <div class="points">
-        <p class="watermark" aria-hidden="true">${esc(content.brand.shortName)}</p>
         ${content.about.points.map(
       (point, index) => `<article class="reveal" style="--d:${index * 70}ms">
             <span>0${index + 1}</span>

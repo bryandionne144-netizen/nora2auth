@@ -1,20 +1,20 @@
 (() => {
-	const TABS = [
-		["apercu", "Aperçu"],
-		["identite", "Identité"],
-		["accueil", "Accueil"],
-		["structure", "Structure"],
-		["services", "Soins"],
-		["zones", "Secteurs"],
-		["horaires", "Horaires"],
-		["demarche", "Démarche"],
-		["galerie", "Galerie"],
-		["avis", "Avis"],
-		["faq", "Questions"],
-		["reservation", "Réservation"],
-		["demandes", "Demandes"],
-		["compte", "Compte"],
+	const TAB_GROUPS = [
+		["Aujourd'hui", [["apercu", "Aperçu"], ["demandes", "Demandes"]]],
+		["La page", [["accueil", "Accueil"], ["identite", "Identité"], ["structure", "Structure"]]],
+		["Contenu", [
+			["services", "Soins"],
+			["zones", "Secteurs"],
+			["horaires", "Horaires"],
+			["demarche", "Démarche"],
+			["galerie", "Galerie"],
+			["avis", "Avis"],
+			["faq", "Questions"],
+			["reservation", "Réservation"],
+		]],
+		["Compte", [["compte", "Compte"]]],
 	];
+	const TABS = TAB_GROUPS.flatMap(([, tabs]) => tabs);
 	const SECTION_LABELS = {
 		about: "Atelier",
 		services: "Soins",
@@ -189,9 +189,14 @@
 	}
 
 	function renderNav() {
-		document.getElementById("tabs").innerHTML = TABS.map(
-			([id, label]) =>
-				`<button type="button" data-tab="${id}" class="${state.tab === id ? "on" : ""}">${esc(label)}${id === "demandes" ? '<em id="badge-demandes"></em>' : ""}</button>`,
+		document.getElementById("tabs").innerHTML = TAB_GROUPS.map(
+			([group, tabs]) =>
+				`<p class="tab-label">${esc(group)}</p>${tabs
+					.map(
+						([id, label]) =>
+							`<button type="button" data-tab="${id}" class="${state.tab === id ? "on" : ""}">${esc(label)}${id === "demandes" ? '<em id="badge-demandes"></em>' : ""}</button>`,
+					)
+					.join("")}`,
 		).join("");
 		document.getElementById("tab-select").innerHTML = TABS.map(([id, label]) => `<option value="${id}">${esc(label)}</option>`).join("");
 	}
