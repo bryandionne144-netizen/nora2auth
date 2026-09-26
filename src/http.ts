@@ -25,7 +25,7 @@ export function renderStatusPage(title: string, text: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${title}</title>
   <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #05070c; color: #eef6ff; font-family: Outfit, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #05070c; color: #eef6ff; font-family: "Instrument Sans", "Segoe UI", sans-serif; }
     main { text-align: center; padding: 32px; }
     a { color: #8fd7ff; }
     h1 { font-weight: 650; letter-spacing: -0.04em; }

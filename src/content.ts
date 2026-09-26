@@ -573,7 +573,7 @@ export const defaultContent: SiteContent = {
 		services: true,
 		zones: true,
 		steps: true,
-		gallery: true,
+		gallery: false,
 		quote: true,
 		testimonials: true,
 		hours: true,
