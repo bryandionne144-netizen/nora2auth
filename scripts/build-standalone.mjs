@@ -59,8 +59,10 @@ ${read("public/site.css")}
   <script type="application/json" id="lc-state">{"updatedAt":0}</script>
   ${plain("lc-logo", `data:image/png;base64,${logo}`)}
   ${plain("lc-admin-css", read("public/admin.css"))}
+  ${plain("lc-cloud", read("public/cloud-sync.js"))}
   ${plain("lc-render", read("public/render-site.js"))}
   ${plain("lc-admin-js", read("public/admin.js"))}
+  ${exec(read("public/cloud-sync.js"))}
   ${exec(read("public/render-site.js"))}
   ${exec(read("public/site.js"))}
   ${exec(read("public/studio.js"))}

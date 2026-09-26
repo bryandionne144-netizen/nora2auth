@@ -46,6 +46,7 @@
 			created_at: new Date().toISOString(),
 		});
 		localStorage.setItem("lc_offline_bookings", JSON.stringify(list.slice(0, 200)));
+		window.dispatchEvent(new CustomEvent("lc-bookings-saved"));
 		return "";
 	}
 

@@ -63,6 +63,7 @@ export function renderAdmin(): string {
   </div>
   <div id="toast" role="status"></div>
   <script type="application/json" id="lc-default">${jsonForScript(defaultContent)}</script>
+  <script src="/cloud-sync.js"></script>
   <script src="/render-site.js"></script>
   <script src="/admin.js"></script>
 </body>

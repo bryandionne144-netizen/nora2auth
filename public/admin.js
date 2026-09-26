@@ -137,11 +137,11 @@
 		const here = state.mode === "file";
 		let label = "À jour";
 		if (here) {
-			if (state.cloud === "pending") label = "Envoi vers le site…";
+			if (state.cloud === "pending") label = "Envoi vers l'autre appareil…";
 			else if (state.dirty) label = "Pas encore envoyé";
-			else if (state.cloud === "error") label = "Pas sur le site en ligne";
-			else if (state.cloud === "ok") label = "Site en ligne à jour";
-			else label = "Prêt pour le site";
+			else if (state.cloud === "error") label = "Pas sur l'autre appareil";
+			else if (state.cloud === "ok") label = "Pareil sur les deux appareils";
+			else label = "Prêt à envoyer";
 		} else if (state.dirty) {
 			label = "Modifications non enregistrées";
 		}
@@ -157,10 +157,10 @@
 		if (state.mode === "file") {
 			banner.hidden = false;
 			banner.textContent = state.cloud === "error"
-				? "Le site en ligne n'a pas reçu le dernier changement. Appuie sur Synchroniser."
+				? "L'autre appareil n'a pas reçu le dernier changement. Appuie sur Synchroniser."
 				: state.cloud === "ok"
-					? "Le site Cloudflare est à jour. Le téléphone affiche la même chose dès qu'il rouvre la page."
-					: "Les changements partent tout seuls vers le site Cloudflare.";
+					? "Le téléphone et l'ordinateur affichent la même chose."
+					: "Un changement ici part tout seul vers l'autre appareil.";
 			return;
 		}
 		if (state.passwordChanged) {
@@ -628,14 +628,29 @@
 	}
 
 	function publishOffline(announce) {
-		persistOffline();
 		state.dirty = false;
-		notifySite();
 		pushLive(announce);
 	}
 
 	let pushBusy = false;
 	let pushAgain = false;
+
+	async function adoptShared() {
+		if (!globalThis.laCocheCloud) return;
+		try {
+			const remote = await globalThis.laCocheCloud.pullShared();
+			if (!remote || !remote.content) return;
+			const local = readStore("lc_offline_pack");
+			const localTime = local && local.updatedAt ? local.updatedAt : 0;
+			if (remote.updatedAt >= localTime) {
+				writeStore("lc_offline_pack", remote);
+				writeStore("lc_offline_content", remote.content);
+				writeStore("lc_offline_bookings", remote.bookings || []);
+			}
+		} catch {
+			/* la copie locale reste affichée */
+		}
+	}
 
 	async function pushLive(announce) {
 		if (state.mode !== "file" || !state.content) return;
@@ -646,20 +661,27 @@
 		pushBusy = true;
 		state.cloud = "pending";
 		updateSave();
+		const pack = { updatedAt: Date.now(), content: state.content, bookings: state.bookings };
+		writeStore("lc_offline_pack", pack);
+		writeStore("lc_offline_content", state.content);
+		writeStore("lc_offline_bookings", state.bookings);
+		if (window.parent && window.parent !== window) {
+			window.parent.postMessage({ type: "lc-hold", updatedAt: pack.updatedAt }, "*");
+		}
+		notifySite();
 		try {
-			const response = await fetch(syncEndpoint(), {
+			if (!globalThis.laCocheCloud) throw new Error("Partage indisponible.");
+			await globalThis.laCocheCloud.pushShared(pack);
+			fetch(syncEndpoint(), {
 				method: "POST",
 				headers: { "content-type": "application/json" },
 				body: JSON.stringify({ password: currentPassword(), content: state.content }),
-			});
-			const data = await response.json().catch(() => ({}));
-			if (!response.ok) throw new Error(data.error || "Le site en ligne n'a pas pris la mise à jour.");
+			}).catch(() => {});
 			state.cloud = "ok";
-			if (announce) toast("Le site en ligne est à jour.");
+			if (announce) toast("C'est pareil sur les deux appareils.");
 		} catch (error) {
 			state.cloud = "error";
-			const offline = !error.message || error.message === "Failed to fetch";
-			if (announce) toast(offline ? "Le site en ligne ne répond pas encore." : error.message);
+			if (announce) toast("L'autre appareil n'a pas reçu le changement.");
 		}
 		pushBusy = false;
 		updateSave();
@@ -686,7 +708,7 @@
 		location.href = "/";
 	}
 
-	function offlineLogin(password) {
+	async function offlineLogin(password) {
 		const error = document.getElementById("login-error");
 		if (!defaultContent()) {
 			error.hidden = false;
@@ -700,6 +722,7 @@
 		}
 		memoryPassword = password;
 		state.mode = "file";
+		await adoptShared();
 		state.content = readStore("lc_offline_content") || defaultContent();
 		state.bookings = readStore("lc_offline_bookings") || [];
 		state.passwordChanged = currentPassword() !== DEFAULT_PASSWORD;
@@ -1038,6 +1061,7 @@
 			if (item) item.status = status;
 			persistOffline();
 			render();
+			pushLive(false);
 			toast("Demande mise à jour.");
 			return;
 		}
@@ -1061,6 +1085,7 @@
 			state.bookings = state.bookings.filter((row) => String(row.id) !== String(id));
 			persistOffline();
 			render();
+			pushLive(false);
 			toast("Demande supprimée.");
 			return;
 		}
@@ -1107,6 +1132,19 @@
 		if (!state.dirty) return;
 		event.preventDefault();
 		event.returnValue = "";
+	});
+
+	window.addEventListener("message", (event) => {
+		const data = event.data;
+		if (!data || data.type !== "lc-remote" || state.mode !== "file" || state.dirty || !data.pack || !data.pack.content) return;
+		state.content = data.pack.content;
+		if (Array.isArray(data.pack.bookings)) state.bookings = data.pack.bookings;
+		writeStore("lc_offline_pack", data.pack);
+		writeStore("lc_offline_content", data.pack.content);
+		writeStore("lc_offline_bookings", data.pack.bookings || []);
+		state.cloud = "ok";
+		render();
+		updateSave();
 	});
 
 	window.addEventListener("storage", (event) => {

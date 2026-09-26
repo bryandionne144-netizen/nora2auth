@@ -33,6 +33,88 @@
 		return null;
 	}
 
+	let holdAt = 0;
+
+	function writePack(pack) {
+		try {
+			localStorage.setItem("lc_offline_pack", JSON.stringify({ updatedAt: pack.updatedAt, content: pack.content }));
+			localStorage.setItem("lc_offline_content", JSON.stringify(pack.content));
+			if (Array.isArray(pack.bookings)) localStorage.setItem("lc_offline_bookings", JSON.stringify(pack.bookings));
+		} catch {
+			/* navigation privée */
+		}
+	}
+
+	let pulling = false;
+	let pullQueued = false;
+
+	async function sharePull() {
+		if (!globalThis.laCocheCloud) return;
+		if (pulling) {
+			pullQueued = true;
+			return;
+		}
+		pulling = true;
+		try {
+			await sharePullOnce();
+		} finally {
+			pulling = false;
+			if (pullQueued) {
+				pullQueued = false;
+				sharePull();
+			}
+		}
+	}
+
+	async function sharePullOnce() {
+		let remote;
+		try {
+			remote = await globalThis.laCocheCloud.pullShared();
+		} catch {
+			return;
+		}
+		const local = storedPack();
+		const localTime = local && local.updatedAt ? local.updatedAt : 0;
+		if (!remote || !remote.content) {
+			if (local && local.content && holdAt < localTime) {
+				let bookings = [];
+				try {
+					bookings = JSON.parse(localStorage.getItem("lc_offline_bookings") || "[]");
+				} catch {
+					bookings = [];
+				}
+				sharePush(local.content, Array.isArray(bookings) ? bookings : []);
+			}
+			return;
+		}
+		if (local && localTime === remote.updatedAt) return;
+		if (local && local.content && localTime > remote.updatedAt) {
+			if (holdAt < localTime) {
+				let bookings = [];
+				try {
+					bookings = JSON.parse(localStorage.getItem("lc_offline_bookings") || "[]");
+				} catch {
+					bookings = [];
+				}
+				sharePush(local.content, Array.isArray(bookings) ? bookings : []);
+			}
+			return;
+		}
+		if (remote.updatedAt < holdAt) return;
+		holdAt = remote.updatedAt;
+		writePack(remote);
+		paint();
+		if (frame.contentWindow) frame.contentWindow.postMessage({ type: "lc-remote", pack: remote }, "*");
+	}
+
+	function sharePush(content, bookings) {
+		if (!globalThis.laCocheCloud || !content) return;
+		const pack = { updatedAt: Date.now(), content, bookings: bookings || [] };
+		holdAt = pack.updatedAt;
+		writePack(pack);
+		globalThis.laCocheCloud.pushShared(pack).catch(() => {});
+	}
+
 	function activeContent() {
 		const filePack = readJson("lc-state");
 		const localPack = storedPack();
@@ -68,6 +150,7 @@
 		const logo = asset("lc-logo").trim() || "/logo.png";
 		const css = asset("lc-admin-css");
 		const defaults = asset("lc-default");
+		const cloudJs = asset("lc-cloud").replace(/<\/script/gi, "<\\/script");
 		const renderJs = asset("lc-render").replace(/<\/script/gi, "<\\/script");
 		const adminJs = asset("lc-admin-js").replace(/<\/script/gi, "<\\/script");
 		return `<!DOCTYPE html>
@@ -128,6 +211,7 @@
   </div>
   <div id="toast" role="status"></div>
   <script type="application/json" id="lc-default">${defaults}</script>
+  <script>${cloudJs}</script>
   <script>${renderJs}</script>
   <script>${adminJs}</script>
 </body>
@@ -164,6 +248,7 @@
 		if (!data || typeof data !== "object") return;
 		if (data.type === "lc-refresh") paint();
 		if (data.type === "lc-close") closeAdmin();
+		if (data.type === "lc-hold") holdAt = Number(data.updatedAt) || Date.now();
 	});
 
 	if ("BroadcastChannel" in window) {
@@ -178,6 +263,37 @@
 		else closeAdmin();
 	});
 
+	function applyRemote(pack) {
+		if (!pack || !pack.content || pack.updatedAt < holdAt) return;
+		const local = storedPack();
+		const localTime = local && local.updatedAt ? local.updatedAt : 0;
+		if (local && local.content && localTime >= pack.updatedAt) return;
+		holdAt = pack.updatedAt;
+		writePack(pack);
+		paint();
+		if (frame.contentWindow) frame.contentWindow.postMessage({ type: "lc-remote", pack }, "*");
+	}
+
 	paint();
+	if (globalThis.laCocheCloud && typeof laCocheCloud.onShared === "function") {
+		laCocheCloud.onShared((pack) => {
+			applyRemote(pack);
+			sharePull();
+		});
+	}
+	sharePull();
+	setInterval(sharePull, 4000);
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "visible") sharePull();
+	});
+	window.addEventListener("lc-bookings-saved", () => {
+		let bookings = [];
+		try {
+			bookings = JSON.parse(localStorage.getItem("lc_offline_bookings") || "[]");
+		} catch {
+			bookings = [];
+		}
+		sharePush(activeContent(), Array.isArray(bookings) ? bookings : []);
+	});
 	if (location.hash === "#admin") openAdmin();
 })();
