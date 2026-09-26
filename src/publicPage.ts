@@ -1,5 +1,5 @@
 import type { GalleryItem, SectionId, ServiceItem, SiteContent, Testimonial, ZoneItem } from "./content";
-import { esc, instagramHref, jsonForScript, rich, telHref, todayInToronto } from "./util";
+import { contentVersion, esc, instagramHref, jsonForScript, rich, telHref, todayInToronto } from "./util";
 
 const STATUS_LABEL: Record<SiteContent["status"]["state"], string> = {
 	ouvert: "Ouvert",
@@ -54,12 +54,38 @@ export function renderPublic(content: SiteContent, requestUrl: URL): string {
 		description: content.seo.description,
 	};
 
+	const version = contentVersion(content);
 	return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-version="${esc(version)}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <script>document.documentElement.classList.add("js")</script>
+  <script>
+(function () {
+  if (location.protocol === "file:") return;
+  var version = ${JSON.stringify(version)};
+  function check() {
+    fetch("/api/public/content?ts=" + Date.now(), { cache: "no-store" }).then(function (response) {
+      return response.ok ? response.json() : null;
+    }).then(function (data) {
+      if (!data || data.version === version) return;
+      var last = Number(sessionStorage.getItem("lc_bust") || 0);
+      if (Date.now() - last < 8000) return;
+      sessionStorage.setItem("lc_bust", String(Date.now()));
+      location.reload();
+    }).catch(function () {});
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") check();
+  });
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) location.reload();
+  });
+})();
+  </script>
   <title>${esc(content.seo.title)}</title>
   <meta name="description" content="${esc(content.seo.description)}" />
   <meta name="theme-color" content="#05070c" />

@@ -11,7 +11,7 @@ import {
 	updateBookingStatus,
 } from "./db";
 import { json } from "./http";
-import { clientIp, isObj, sameOrigin, todayInToronto } from "./util";
+import { clientIp, contentVersion, isObj, sameOrigin, todayInToronto } from "./util";
 
 const BOOKING_STATUS = new Set(["nouveau", "confirme", "fait", "annule"]);
 const bookingHits = new Map<string, { n: number; reset: number }>();
@@ -37,6 +37,11 @@ async function readJson(request: Request): Promise<unknown> {
 export async function handleApi(request: Request, env: Env, url: URL): Promise<Response> {
 	const path = url.pathname;
 	const method = request.method;
+
+	if (path === "/api/public/content" && method === "GET") {
+		const content = await getContent(env);
+		return json({ version: contentVersion(content) });
+	}
 
 	if (path === "/api/bookings" && method === "POST") {
 		if (!sameOrigin(request)) return json({ error: "Origine refusée." }, 403);

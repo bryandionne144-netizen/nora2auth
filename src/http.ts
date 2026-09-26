@@ -3,7 +3,11 @@ export function html(body: string, status = 200): Response {
 		status,
 		headers: {
 			"content-type": "text/html; charset=utf-8",
-			"cache-control": "no-store",
+			"cache-control": "no-store, no-cache, must-revalidate, max-age=0",
+			"cdn-cache-control": "no-store",
+			"cloudflare-cdn-cache-control": "no-store",
+			pragma: "no-cache",
+			expires: "0",
 			"x-content-type-options": "nosniff",
 			"referrer-policy": "strict-origin-when-cross-origin",
 		},
@@ -13,7 +17,9 @@ export function html(body: string, status = 200): Response {
 export function json(data: unknown, status = 200, headers?: HeadersInit): Response {
 	const next = new Headers(headers);
 	next.set("content-type", "application/json; charset=utf-8");
-	next.set("cache-control", "no-store");
+	next.set("cache-control", "no-store, no-cache, must-revalidate, max-age=0");
+	next.set("cdn-cache-control", "no-store");
+	next.set("cloudflare-cdn-cache-control", "no-store");
 	return new Response(JSON.stringify(data), { status, headers: next });
 }
 

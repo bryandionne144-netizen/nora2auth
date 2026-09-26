@@ -36,6 +36,13 @@ export function keep(value: unknown, fallback: string, max = 400): string {
 	return value.trim().slice(0, max);
 }
 
+export function contentVersion(value: unknown): string {
+	const raw = JSON.stringify(value);
+	let hash = 0;
+	for (let i = 0; i < raw.length; i += 1) hash = (Math.imul(31, hash) + raw.charCodeAt(i)) | 0;
+	return (hash >>> 0).toString(36);
+}
+
 export function todayInToronto(): string {
 	return new Intl.DateTimeFormat("en-CA", {
 		timeZone: "America/Toronto",
