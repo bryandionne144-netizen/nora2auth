@@ -191,6 +191,13 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,node,git
 
+# Gen shop
+gen-shop/bin/
+gen-shop/obj/
+*.db
+*.db-shm
+*.db-wal
+
 ### Wrangler ###
 .wrangler/
 .env*

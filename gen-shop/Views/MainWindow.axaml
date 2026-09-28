@@ -1,0 +1,215 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="using:GenShop.Controls"
+        xmlns:vm="using:GenShop.ViewModels"
+        xmlns:m="using:GenShop.Models"
+        x:Class="GenShop.Views.MainWindow"
+        x:Name="Root"
+        x:DataType="vm:MainViewModel"
+        Title="Nora Gen"
+        Width="840"
+        Height="520"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        Background="#050814"
+        RequestedThemeVariant="Dark"
+        FontFamily="Inter">
+  <Border Background="#070C18"
+          BorderBrush="#1C2A44"
+          BorderThickness="1"
+          CornerRadius="18"
+          ClipToBounds="True">
+    <Grid>
+      <ctrl:StarField />
+      <Grid Margin="22,18,22,18" RowDefinitions="Auto,*">
+        <Grid ColumnDefinitions="Auto,*,Auto" PointerPressed="Header_OnPointerPressed">
+          <Image Width="42"
+                 Height="42"
+                 Source="avares://NoraGen/Assets/logo.png"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="Nora Gen"
+                     Margin="14,0,0,0"
+                     VerticalAlignment="Center"
+                     FontSize="22"
+                     FontWeight="SemiBold"
+                     Foreground="White" />
+          <Button Grid.Column="2"
+                  Classes="nav"
+                  Width="36"
+                  Height="36"
+                  Padding="0"
+                  HorizontalAlignment="Right"
+                  HorizontalContentAlignment="Center"
+                  Click="Close_OnClick">
+            <TextBlock Text="×" FontSize="20" Foreground="#9AA6BD" />
+          </Button>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,22,0,0" ColumnDefinitions="168,*">
+          <StackPanel Spacing="6" Margin="0,8,18,0">
+            <Button Classes="nav" Classes.selected="{Binding IsProducts}" Command="{Binding ShowProductsCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Path Width="16" Height="16" Stretch="Uniform" Data="M2,8 L8,2.5 L14,8 V14 H10 V9.5 H6 V14 H2 Z" />
+                <TextBlock Text="Products" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav" Classes.selected="{Binding IsSettings}" Command="{Binding ShowSettingsCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Path Width="16" Height="16" Stretch="Uniform" Data="M2,3 H14 V5 H2 Z M2,7 H14 V9 H2 Z M2,11 H14 V13 H2 Z" />
+                <TextBlock Text="Settings" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav" Classes.selected="{Binding IsDiscord}" Command="{Binding ShowDiscordCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Path Width="16" Height="16" Stretch="Uniform" Data="M2,3 H14 V10 H9 L6,13 V10 H2 Z" />
+                <TextBlock Text="Discord" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <Grid Grid.Column="1" IsVisible="{Binding IsProducts}" RowDefinitions="Auto,Auto,Auto">
+            <Grid ColumnDefinitions="*,210">
+              <StackPanel Spacing="14" Margin="8,0,28,0">
+                <TextBlock Text="OPTIONS" Classes="section" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <ctrl:PillToggle Label="Gen Steam" IsChecked="{Binding SteamOn, Mode=TwoWay}" IsEnabled="{Binding SteamAvailable}" />
+                  <TextBlock Text="{Binding SteamStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <ctrl:PillToggle Label="Gen Rockstar" IsChecked="{Binding RockstarOn, Mode=TwoWay}" IsEnabled="{Binding RockstarAvailable}" />
+                  <TextBlock Text="{Binding RockstarStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <ctrl:PillToggle Label="Gen Discord" IsChecked="{Binding DiscordOn, Mode=TwoWay}" IsEnabled="{Binding DiscordAvailable}" />
+                  <TextBlock Text="{Binding DiscordStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
+                </StackPanel>
+                <Button Classes="ghost" Content="Load" Command="{Binding LoadCommand}" HorizontalAlignment="Left" MinWidth="200" Margin="0,8,0,0" />
+              </StackPanel>
+
+              <StackPanel Grid.Column="1" Spacing="16">
+                <TextBlock Text="ADDITIONAL" Classes="section" />
+                <ctrl:PillToggle Label="Live code" IsChecked="{Binding LiveCode, Mode=TwoWay}" />
+                <Grid ColumnDefinitions="Auto,*">
+                  <ctrl:PillToggle Label="Background" IsChecked="{Binding BackgroundCopy, Mode=TwoWay}" />
+                  <TextBlock Grid.Column="1"
+                             Text="(?)"
+                             Margin="8,0,0,0"
+                             VerticalAlignment="Center"
+                             Foreground="#8E9BB3"
+                             FontSize="12"
+                             ToolTip.Tip="Copie l'utilisateur, le mot de passe et le code 2FA dans le presse-papiers." />
+                </Grid>
+                <Button Classes="ghost" Content="New code" Command="{Binding NewCodeCommand}" HorizontalAlignment="Stretch" Margin="0,10,0,0" />
+                <Button Classes="ghost" Content="Mark used" Command="{Binding MarkCommand}" HorizontalAlignment="Stretch" />
+              </StackPanel>
+            </Grid>
+
+            <TextBlock Grid.Row="1"
+                       Text="{Binding Status}"
+                       Margin="8,18,0,0"
+                       Foreground="#8B97AD"
+                       FontSize="13" />
+
+            <Border Grid.Row="2"
+                    Margin="8,12,0,0"
+                    Padding="0,12,0,0"
+                    BorderBrush="#1C2942"
+                    BorderThickness="0,1,0,0"
+                    IsVisible="{Binding HasLoaded}">
+              <StackPanel Spacing="10">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LoadedRow">
+                      <Grid ColumnDefinitions="150,*,150,52" Margin="0,0,0,8">
+                        <StackPanel Spacing="3">
+                          <TextBlock Text="{Binding Product}" Classes="section" />
+                          <TextBlock Text="{Binding Username}" Foreground="White" FontSize="14" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="3">
+                          <TextBlock Text="PASSWORD" Classes="section" />
+                          <TextBlock Text="{Binding PasswordText}" Foreground="#D7DEEA" FontSize="14" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="3">
+                          <TextBlock Text="2FA" Classes="section" />
+                          <TextBlock Text="{Binding Code}" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="3"
+                                   Text="{Binding Remain}"
+                                   Foreground="#3EC6FF"
+                                   FontSize="13"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Right" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Classes="nav" Command="{Binding ToggleRevealCommand}" HorizontalAlignment="Left" Padding="0,4">
+                  <TextBlock Text="{Binding RevealLabel}" />
+                </Button>
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <ScrollViewer Grid.Column="1" IsVisible="{Binding IsSettings}" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="8,0,8,0">
+              <TextBlock Text="STOCK" Classes="section" />
+              <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Text="Product" Foreground="#8B97AD" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding ProductOptions}"
+                          SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="User" Foreground="#8B97AD" VerticalAlignment="Center" Margin="0,8,0,0" />
+                <TextBox Grid.Row="1" Grid.Column="1" Classes="field" Text="{Binding FormUser, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Watermark="utilisateur" Margin="0,8,0,0" />
+                <TextBlock Grid.Row="2" Text="Password" Foreground="#8B97AD" VerticalAlignment="Center" Margin="0,8,0,0" />
+                <TextBox Grid.Row="2" Grid.Column="1" Classes="field" Text="{Binding FormPass, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PasswordChar="{Binding PasswordMask}" Watermark="mot de passe" Margin="0,8,0,0" />
+                <TextBlock Grid.Row="3" Text="2FA secret" Foreground="#8B97AD" VerticalAlignment="Center" Margin="0,8,0,0" />
+                <TextBox Grid.Row="3" Grid.Column="1" Classes="field" Text="{Binding FormSecret, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PasswordChar="{Binding PasswordMask}" Watermark="base32 ou otpauth://" Margin="0,8,0,0" />
+              </Grid>
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="ghost" Content="Add" Command="{Binding AddCommand}" MinWidth="140" />
+                <CheckBox Content="Afficher" IsChecked="{Binding RevealForm}" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Text="{Binding FormStatus}" Foreground="#8B97AD" FontSize="13" />
+              <TextBlock Text="DATABASE" Classes="section" Margin="0,4,0,0" />
+              <TextBox Classes="field" Text="{Binding DbPath}" IsReadOnly="True" />
+              <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding Accounts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="m:AccountListItem">
+                    <Grid ColumnDefinitions="130,*,90,90" Margin="0,0,0,8">
+                      <TextBlock Text="{Binding ProductLabel}" Foreground="White" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Username}" Foreground="#D7DEEA" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding State}" Foreground="#8B97AD" VerticalAlignment="Center" />
+                      <Button Grid.Column="3"
+                              Classes="ghost"
+                              Content="Retirer"
+                              Padding="8,6"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).DeleteCommand}"
+                              CommandParameter="{Binding Id}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              </ScrollViewer>
+            </StackPanel>
+          </ScrollViewer>
+
+          <StackPanel Grid.Column="1" IsVisible="{Binding IsDiscord}" Spacing="12" Margin="8,0,8,0">
+            <TextBlock Text="DISCORD" Classes="section" />
+            <TextBlock Text="Lien du shop. https seulement." Foreground="#8B97AD" FontSize="13" />
+            <TextBox Classes="field" Text="{Binding DiscordUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Watermark="https://discord.gg/..." />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Button Classes="ghost" Content="Save" Command="{Binding SaveDiscordCommand}" MinWidth="140" />
+              <Button Classes="ghost" Content="Open" Command="{Binding OpenDiscordCommand}" MinWidth="140" />
+            </StackPanel>
+            <TextBlock Text="{Binding DiscordStatus}" Foreground="#8B97AD" FontSize="13" />
+          </StackPanel>
+        </Grid>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>
