@@ -7,8 +7,8 @@
         x:Name="Root"
         x:DataType="vm:MainViewModel"
         Title="Nora Gen"
-        Width="840"
-        Height="520"
+        Width="700"
+        Height="460"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
@@ -20,9 +20,7 @@
           BorderThickness="1"
           CornerRadius="18"
           ClipToBounds="True">
-    <Grid>
-      <ctrl:StarField />
-      <Grid Margin="22,18,22,18" RowDefinitions="Auto,*">
+    <Grid Margin="22,18,22,18" RowDefinitions="Auto,*">
         <Grid ColumnDefinitions="Auto,*,Auto" PointerPressed="Header_OnPointerPressed">
           <Image Width="42"
                  Height="42"
@@ -71,41 +69,22 @@
           </StackPanel>
 
           <Grid Grid.Column="1" IsVisible="{Binding IsProducts}" RowDefinitions="Auto,Auto,Auto">
-            <Grid ColumnDefinitions="*,210">
-              <StackPanel Spacing="14" Margin="8,0,28,0">
-                <TextBlock Text="OPTIONS" Classes="section" />
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <ctrl:PillToggle Label="Gen Steam" IsChecked="{Binding SteamOn, Mode=TwoWay}" IsEnabled="{Binding SteamAvailable}" />
-                  <TextBlock Text="{Binding SteamStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <ctrl:PillToggle Label="Gen Rockstar" IsChecked="{Binding RockstarOn, Mode=TwoWay}" IsEnabled="{Binding RockstarAvailable}" />
-                  <TextBlock Text="{Binding RockstarStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <ctrl:PillToggle Label="Gen Discord" IsChecked="{Binding DiscordOn, Mode=TwoWay}" IsEnabled="{Binding DiscordAvailable}" />
-                  <TextBlock Text="{Binding DiscordStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
-                </StackPanel>
-                <Button Classes="ghost" Content="Load" Command="{Binding LoadCommand}" HorizontalAlignment="Left" MinWidth="200" Margin="0,8,0,0" />
+            <StackPanel Spacing="14" Margin="8,0,8,0">
+              <TextBlock Text="OPTIONS" Classes="section" />
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <ctrl:PillToggle Label="Gen Steam" IsChecked="{Binding SteamOn, Mode=TwoWay}" IsEnabled="{Binding SteamAvailable}" />
+                <TextBlock Text="{Binding SteamStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
               </StackPanel>
-
-              <StackPanel Grid.Column="1" Spacing="16">
-                <TextBlock Text="ADDITIONAL" Classes="section" />
-                <ctrl:PillToggle Label="Live code" IsChecked="{Binding LiveCode, Mode=TwoWay}" />
-                <Grid ColumnDefinitions="Auto,*">
-                  <ctrl:PillToggle Label="Background" IsChecked="{Binding BackgroundCopy, Mode=TwoWay}" />
-                  <TextBlock Grid.Column="1"
-                             Text="(?)"
-                             Margin="8,0,0,0"
-                             VerticalAlignment="Center"
-                             Foreground="#8E9BB3"
-                             FontSize="12"
-                             ToolTip.Tip="Copie l'utilisateur, le mot de passe et le code 2FA dans le presse-papiers." />
-                </Grid>
-                <Button Classes="ghost" Content="New code" Command="{Binding NewCodeCommand}" HorizontalAlignment="Stretch" Margin="0,10,0,0" />
-                <Button Classes="ghost" Content="Mark used" Command="{Binding MarkCommand}" HorizontalAlignment="Stretch" />
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <ctrl:PillToggle Label="Gen Rockstar" IsChecked="{Binding RockstarOn, Mode=TwoWay}" IsEnabled="{Binding RockstarAvailable}" />
+                <TextBlock Text="{Binding RockstarStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
               </StackPanel>
-            </Grid>
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <ctrl:PillToggle Label="Gen Discord" IsChecked="{Binding DiscordOn, Mode=TwoWay}" IsEnabled="{Binding DiscordAvailable}" />
+                <TextBlock Text="{Binding DiscordStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
+              </StackPanel>
+              <Button Classes="ghost" Content="Load" Command="{Binding LoadCommand}" HorizontalAlignment="Left" MinWidth="200" Margin="0,8,0,0" />
+            </StackPanel>
 
             <TextBlock Grid.Row="1"
                        Text="{Binding Status}"
@@ -210,6 +189,5 @@
           </StackPanel>
         </Grid>
       </Grid>
-    </Grid>
   </Border>
 </Window>
