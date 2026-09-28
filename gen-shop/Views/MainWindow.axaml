@@ -6,7 +6,7 @@
         x:Class="GenShop.Views.MainWindow"
         x:Name="Root"
         x:DataType="vm:MainViewModel"
-        Title="Gen"
+        Title="Nora Gen"
         Width="840"
         Height="520"
         CanResize="False"
@@ -24,23 +24,13 @@
       <ctrl:StarField />
       <Grid Margin="22,18,22,18" RowDefinitions="Auto,*">
         <Grid ColumnDefinitions="Auto,*,Auto" PointerPressed="Header_OnPointerPressed">
-          <Border Width="42"
-                  Height="42"
-                  CornerRadius="12"
-                  Background="#102033"
-                  BorderBrush="#1E4B73"
-                  BorderThickness="1"
-                  HorizontalAlignment="Left"
-                  VerticalAlignment="Center">
-            <Viewbox Margin="8">
-              <Canvas Width="24" Height="24">
-                <Path Fill="#4FD2FF" Data="M3,18 L3,9 L8,12 L12,3 L16,12 L21,9 L21,18 Z" />
-                <Ellipse Canvas.Left="9.2" Canvas.Top="14" Width="5.6" Height="3.2" Fill="#071018" />
-              </Canvas>
-            </Viewbox>
-          </Border>
+          <Image Width="42"
+                 Height="42"
+                 Source="avares://NoraGen/Assets/logo.png"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
-                     Text="Gen"
+                     Text="Nora Gen"
                      Margin="14,0,0,0"
                      VerticalAlignment="Center"
                      FontSize="22"
