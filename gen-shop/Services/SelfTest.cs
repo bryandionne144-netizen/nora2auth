@@ -84,6 +84,37 @@ public static class SelfTest
             TryDelete(db + "-wal");
             TryDelete(db + "-shm");
         }
+
+        var db2 = Path.Combine(Path.GetTempPath(), "gen-selftest-" + Guid.NewGuid().ToString("N") + ".db");
+        try
+        {
+                using var fresh = new AccountStore(db2);
+                var added = new MainViewModel(fresh);
+                if (added.SteamOn || added.SteamStock != 0)
+                    throw new InvalidOperationException("steam actif à vide");
+                added.FormUser = "alice";
+                added.FormPass = "secret-pass";
+                added.FormSecret = RfcSecret;
+                await added.SubmitAccountAsync();
+                if (!added.SteamOn || added.SteamStock != 1 || added.FormStatus != "Compte ajouté.")
+                    throw new InvalidOperationException("ajout ui " + added.FormStatus + " on=" + added.SteamOn + " stock=" + added.SteamStock);
+                var copiedLine = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+                added.CopyAsync = text =>
+                {
+                    copiedLine.TrySetResult(text);
+                    return Task.FromResult(true);
+                };
+                await added.LoadSelectedAsync();
+                var line = await copiedLine.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                if (!line.StartsWith("steam:alice:secret-pass:", StringComparison.Ordinal) || added.Status != "Copié en arrière-plan.")
+                    throw new InvalidOperationException("load après ajout " + added.Status + " " + line);
+            }
+        finally
+        {
+            TryDelete(db2);
+            TryDelete(db2 + "-wal");
+            TryDelete(db2 + "-shm");
+        }
     }
 
     private static bool PreviousWindow(string otp)

@@ -22,6 +22,7 @@ public partial class PillToggle : UserControl
     public PillToggle()
     {
         InitializeComponent();
+        PointerPressed += OnPointerPressed;
         ApplyVisual();
     }
 
@@ -44,7 +45,7 @@ public partial class PillToggle : UserControl
             ApplyVisual();
     }
 
-    private void Track_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!IsEnabled || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             return;

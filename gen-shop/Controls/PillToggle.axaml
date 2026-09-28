@@ -9,8 +9,7 @@
             CornerRadius="12"
             Background="#3A4458"
             Cursor="Hand"
-            VerticalAlignment="Center"
-            PointerPressed="Track_OnPointerPressed">
+            VerticalAlignment="Center">
       <Border x:Name="Knob"
               Width="18"
               Height="18"

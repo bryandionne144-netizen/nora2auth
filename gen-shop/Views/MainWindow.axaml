@@ -85,15 +85,15 @@
               <StackPanel Spacing="14" Margin="8,0,28,0">
                 <TextBlock Text="OPTIONS" Classes="section" />
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                  <ctrl:PillToggle Label="Gen Steam" IsChecked="{Binding SteamOn}" IsEnabled="{Binding SteamAvailable}" />
+                  <ctrl:PillToggle Label="Gen Steam" IsChecked="{Binding SteamOn, Mode=TwoWay}" IsEnabled="{Binding SteamAvailable}" />
                   <TextBlock Text="{Binding SteamStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                  <ctrl:PillToggle Label="Gen Rockstar" IsChecked="{Binding RockstarOn}" IsEnabled="{Binding RockstarAvailable}" />
+                  <ctrl:PillToggle Label="Gen Rockstar" IsChecked="{Binding RockstarOn, Mode=TwoWay}" IsEnabled="{Binding RockstarAvailable}" />
                   <TextBlock Text="{Binding RockstarStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                  <ctrl:PillToggle Label="Gen Discord" IsChecked="{Binding DiscordOn}" IsEnabled="{Binding DiscordAvailable}" />
+                  <ctrl:PillToggle Label="Gen Discord" IsChecked="{Binding DiscordOn, Mode=TwoWay}" IsEnabled="{Binding DiscordAvailable}" />
                   <TextBlock Text="{Binding DiscordStockText}" VerticalAlignment="Center" Foreground="#6D7890" FontSize="12" />
                 </StackPanel>
                 <Button Classes="ghost" Content="Load" Command="{Binding LoadCommand}" HorizontalAlignment="Left" MinWidth="200" Margin="0,8,0,0" />
@@ -101,9 +101,9 @@
 
               <StackPanel Grid.Column="1" Spacing="16">
                 <TextBlock Text="ADDITIONAL" Classes="section" />
-                <ctrl:PillToggle Label="Live code" IsChecked="{Binding LiveCode}" />
+                <ctrl:PillToggle Label="Live code" IsChecked="{Binding LiveCode, Mode=TwoWay}" />
                 <Grid ColumnDefinitions="Auto,*">
-                  <ctrl:PillToggle Label="Background" IsChecked="{Binding BackgroundCopy}" />
+                  <ctrl:PillToggle Label="Background" IsChecked="{Binding BackgroundCopy, Mode=TwoWay}" />
                   <TextBlock Grid.Column="1"
                              Text="(?)"
                              Margin="8,0,0,0"

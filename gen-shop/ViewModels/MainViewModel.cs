@@ -61,9 +61,6 @@ public sealed class MainViewModel : Observable
         OpenDiscordCommand = new RelayCommand(OpenDiscord);
 
         RefreshStock();
-        SteamOn = SteamStock > 0;
-        RockstarOn = RockstarStock > 0;
-        DiscordOn = DiscordStock > 0;
         ReloadList();
         if (string.Equals(AppState.StartPage, "settings", StringComparison.OrdinalIgnoreCase))
             SetPage(AppPage.Settings);
@@ -208,6 +205,8 @@ public sealed class MainViewModel : Observable
     public bool HasStock => SteamAvailable || RockstarAvailable || DiscordAvailable;
 
     public Task LoadSelectedAsync() => LoadAsync();
+
+    public Task SubmitAccountAsync() => AddAsync();
 
     public void Tick()
     {
@@ -466,25 +465,26 @@ public sealed class MainViewModel : Observable
 
     private void RefreshStock()
     {
-        SetStock(ref _steamStock, _store.CountAvailable("steam"), nameof(SteamStock), nameof(SteamAvailable), nameof(SteamStockText));
-        SetStock(ref _rockstarStock, _store.CountAvailable("rockstar"), nameof(RockstarStock), nameof(RockstarAvailable), nameof(RockstarStockText));
-        SetStock(ref _discordStock, _store.CountAvailable("discord"), nameof(DiscordStock), nameof(DiscordAvailable), nameof(DiscordStockText));
-        if (_steamStock == 0)
-            SteamOn = false;
-        if (_rockstarStock == 0)
-            RockstarOn = false;
-        if (_discordStock == 0)
-            DiscordOn = false;
+        UpdateStock(ref _steamStock, _store.CountAvailable("steam"), () => SteamOn, value => SteamOn = value, nameof(SteamStock), nameof(SteamAvailable), nameof(SteamStockText));
+        UpdateStock(ref _rockstarStock, _store.CountAvailable("rockstar"), () => RockstarOn, value => RockstarOn = value, nameof(RockstarStock), nameof(RockstarAvailable), nameof(RockstarStockText));
+        UpdateStock(ref _discordStock, _store.CountAvailable("discord"), () => DiscordOn, value => DiscordOn = value, nameof(DiscordStock), nameof(DiscordAvailable), nameof(DiscordStockText));
     }
 
-    private void SetStock(ref int field, int value, string stockName, string availableName, string textName)
+    private void UpdateStock(ref int field, int value, Func<bool> getOn, Action<bool> setOn, string stockName, string availableName, string textName)
     {
-        if (field == value)
-            return;
-        field = value;
-        OnPropertyChanged(stockName);
-        OnPropertyChanged(availableName);
-        OnPropertyChanged(textName);
+        var previous = field;
+        if (field != value)
+        {
+            field = value;
+            OnPropertyChanged(stockName);
+            OnPropertyChanged(availableName);
+            OnPropertyChanged(textName);
+        }
+
+        if (value == 0 && getOn())
+            setOn(false);
+        else if (previous == 0 && value > 0 && !getOn())
+            setOn(true);
     }
 
     private void ReloadList()
